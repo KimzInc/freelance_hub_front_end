@@ -4,7 +4,6 @@ const api = axios.create({
   baseURL: process.env.REACT_APP_API_URL,
 });
 
-// Attach access token on every request
 api.interceptors.request.use((config) => {
   const access = localStorage.getItem("access");
   if (access) config.headers.Authorization = `Bearer ${access}`;

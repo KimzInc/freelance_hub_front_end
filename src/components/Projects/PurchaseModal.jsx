@@ -1,7 +1,8 @@
-import { useState, useContext } from "react";
+import { useState, useContext, useEffect } from "react";
 import { AuthContext } from "../../context/AuthContext";
 import { purchaseProject } from "../services/projects";
 import { Link, useNavigate } from "react-router-dom";
+import Portal from "../common/Portal";
 
 export default function PurchaseModal({ project, onClose }) {
   const { user } = useContext(AuthContext);
@@ -26,57 +27,101 @@ export default function PurchaseModal({ project, onClose }) {
     }
   };
 
+  // Close modal when clicking outside
+  const handleBackdropClick = (e) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
+  // Close modal on Escape key
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [onClose]);
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-      <div className="bg-white rounded-lg shadow-lg p-6 w-96">
-        <h2 className="text-xl font-bold mb-4">{project.title}</h2>
+    <Portal className="modal-container">
+      <div className="modal-backdrop" onClick={handleBackdropClick}>
+        <div className="modal-content">
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-2xl"
+            aria-label="Close"
+          >
+            &times;
+          </button>
 
-        {!user ? (
-          <div>
-            <p className="mb-4">
-              Please login or register to purchase this project.
-            </p>
-            <div className="flex gap-4">
-              <Link
-                to="/login"
-                className="px-4 py-2 bg-blue-500 text-white rounded"
-              >
-                Login
-              </Link>
-              <Link
-                to="/register"
-                className="px-4 py-2 bg-green-500 text-white rounded"
-              >
-                Register
-              </Link>
+          <h2 className="text-xl font-bold mb-4">{project.title}</h2>
+
+          {!user ? (
+            <div>
+              <p className="mb-4 text-gray-600">
+                Please login or register to purchase this project.
+              </p>
+              <div className="flex gap-4">
+                <Link
+                  to="/login"
+                  className="flex-1 btn-primary text-center"
+                  onClick={onClose}
+                >
+                  Login
+                </Link>
+                <Link
+                  to="/register"
+                  className="flex-1 btn-secondary text-center"
+                  onClick={onClose}
+                >
+                  Register
+                </Link>
+              </div>
             </div>
-          </div>
-        ) : (
-          <div>
-            <label className="flex items-center mb-4">
-              <input
-                type="checkbox"
-                checked={terms}
-                onChange={(e) => setTerms(e.target.checked)}
-                className="mr-2"
-              />
-              I accept the terms and conditions.
-            </label>
-            <button
-              onClick={handlePurchase}
-              disabled={loading}
-              className="w-full bg-blue-600 text-white py-2 rounded disabled:opacity-50"
-            >
-              {loading ? "Processing..." : "Purchase"}
-            </button>
-            {message && <p className="mt-2 text-sm text-red-600">{message}</p>}
-          </div>
-        )}
+          ) : (
+            <div>
+              <p className="text-gray-600 mb-4">Price: ${project.price}</p>
 
-        <button onClick={onClose} className="mt-4 w-full border py-2 rounded">
-          Close
-        </button>
+              <label className="flex items-center mb-4 p-3 bg-gray-50 rounded-lg">
+                <input
+                  type="checkbox"
+                  checked={terms}
+                  onChange={(e) => {
+                    setTerms(e.target.checked);
+                    setMessage("");
+                  }}
+                  className="mr-3"
+                />
+                <span className="text-sm">
+                  I accept the terms and conditions for purchasing this project.
+                </span>
+              </label>
+
+              <button
+                onClick={handlePurchase}
+                disabled={loading || !terms}
+                className="w-full btn-primary py-2"
+              >
+                {loading ? "Processing..." : "Purchase Now"}
+              </button>
+
+              {message && (
+                <p className="mt-3 text-sm text-red-600 bg-red-50 p-2 rounded">
+                  {message}
+                </p>
+              )}
+            </div>
+          )}
+
+          <button onClick={onClose} className="w-full btn-secondary mt-4">
+            Close
+          </button>
+        </div>
       </div>
-    </div>
+    </Portal>
   );
 }
