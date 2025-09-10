@@ -8,8 +8,8 @@ export default function CustomRequestDetailPage() {
   const [request, setRequest] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
-
   const [showFullFile, setShowFullFile] = useState(false);
+  const [timeRemaining, setTimeRemaining] = useState({});
 
   useEffect(() => {
     async function fetchRequest() {
@@ -27,6 +27,51 @@ export default function CustomRequestDetailPage() {
     }
     fetchRequest();
   }, [id]);
+
+  // Calculate time remaining until deadline
+  useEffect(() => {
+    if (!request || !request.deadline) return;
+
+    const calculateTimeRemaining = () => {
+      const deadline = new Date(request.deadline);
+      const now = new Date();
+      const difference = deadline - now;
+
+      if (difference <= 0) {
+        setTimeRemaining({ expired: true });
+        return;
+      }
+
+      const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+      const hours = Math.floor(
+        (difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
+      );
+      const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+
+      setTimeRemaining({ days, hours, minutes, seconds, expired: false });
+    };
+
+    // Calculate immediately
+    calculateTimeRemaining();
+
+    // Update every second if not expired
+    if (!timeRemaining.expired) {
+      const timer = setInterval(calculateTimeRemaining, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [request, timeRemaining.expired]);
+
+  // Check if project is urgent (less than 24 hours until deadline)
+  const isUrgent = () => {
+    if (!request || !request.deadline) return false;
+
+    const deadline = new Date(request.deadline);
+    const now = new Date();
+    const hoursRemaining = (deadline - now) / (1000 * 60 * 60);
+
+    return hoursRemaining <= 24 && hoursRemaining > 0;
+  };
 
   if (loading) {
     return (
@@ -57,17 +102,80 @@ export default function CustomRequestDetailPage() {
     CANCELLED: "bg-red-100 text-red-800",
   };
 
+  const urgentColors = {
+    URGENT: "bg-red-100 text-red-800 border border-red-300",
+  };
+
+  // Format the timer display
+  const formatTimeRemaining = () => {
+    if (timeRemaining.expired) {
+      return "Deadline passed";
+    }
+
+    if (!timeRemaining.days && !timeRemaining.hours && !timeRemaining.minutes) {
+      return "Less than a minute remaining";
+    }
+
+    let parts = [];
+    if (timeRemaining.days > 0) parts.push(`${timeRemaining.days}d`);
+    if (timeRemaining.hours > 0) parts.push(`${timeRemaining.hours}h`);
+    if (timeRemaining.minutes > 0) parts.push(`${timeRemaining.minutes}m`);
+
+    return parts.join(" ") + " remaining";
+  };
+
   return (
     <div className="max-w-3xl mx-auto p-6 bg-white rounded shadow mt-8 space-y-4">
-      <h1 className="text-2xl font-bold">{request.title}</h1>
+      <div className="flex justify-between items-start">
+        <h1 className="text-2xl font-bold">{request.title}</h1>
 
-      <span
-        className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
-          statusColors[request.status] || "bg-gray-100 text-gray-800"
-        }`}
-      >
-        {request.status}
-      </span>
+        <div className="flex flex-col items-end gap-2">
+          {/* Status badge */}
+          <span
+            className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
+              statusColors[request.status] || "bg-gray-100 text-gray-800"
+            }`}
+          >
+            {request.status}
+          </span>
+
+          {/* URGENT badge - only show if project is urgent */}
+          {isUrgent() && (
+            <span
+              className={`inline-block px-3 py-1 rounded-full text-sm font-bold ${urgentColors.URGENT}`}
+            >
+              ⚡ URGENT
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Countdown Timer */}
+      {request.paid_amount > 0 && request.deadline && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <h3 className="font-medium text-blue-800 mb-2">Time Remaining</h3>
+          <div className="flex items-center justify-between">
+            <div className="text-2xl font-mono font-bold text-blue-900">
+              {timeRemaining.expired ? (
+                <span className="text-red-600">⏰ EXPIRED</span>
+              ) : (
+                <>
+                  {timeRemaining.days > 0 && (
+                    <span>{timeRemaining.days}d </span>
+                  )}
+                  <span>{String(timeRemaining.hours).padStart(2, "0")}:</span>
+                  <span>{String(timeRemaining.minutes).padStart(2, "0")}:</span>
+                  <span>{String(timeRemaining.seconds).padStart(2, "0")}</span>
+                </>
+              )}
+            </div>
+            <div className="text-sm text-blue-700">{formatTimeRemaining()}</div>
+          </div>
+          <p className="text-xs text-blue-600 mt-2">
+            Deadline: {new Date(request.deadline).toLocaleString()}
+          </p>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-4 text-sm">
         <p>

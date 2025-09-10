@@ -1,6 +1,5 @@
 import ProjectCard from "./ProjectCard";
 import withErrorBoundary from "../common/withErrorBoundary";
-//import ErrorFallback from "../common/ErrorFallback";
 
 function ProjectList({ projects, loading = false }) {
   if (loading) {

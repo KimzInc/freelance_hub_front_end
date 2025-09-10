@@ -1,10 +1,14 @@
 import { useState, useEffect } from "react";
-import { createPayPalOrder, capturePayPalOrder } from "../services/projects";
 import { toast } from "react-toastify";
 import { PayPalButtons } from "@paypal/react-paypal-js";
 import Portal from "../common/Portal";
 
-export default function PurchaseModal({ project, onClose }) {
+import {
+  createPayPalOrderCustomRequest,
+  capturePayPalOrder,
+} from "../services/projects";
+
+export default function CustomRequestPurchaseModal({ request, onClose }) {
   const [terms, setTerms] = useState(false);
 
   // Close modal on Escape key
@@ -14,10 +18,11 @@ export default function PurchaseModal({ project, onClose }) {
         onClose();
       }
     };
-
     document.addEventListener("keydown", handleEscape);
     return () => document.removeEventListener("keydown", handleEscape);
   }, [onClose]);
+
+  const remaining = request.total_price - request.paid_amount;
 
   return (
     <Portal className="modal-container">
@@ -33,8 +38,17 @@ export default function PurchaseModal({ project, onClose }) {
             ×
           </button>
 
-          <h2 className="text-xl font-bold mb-4">{project.title}</h2>
-          <p className="text-gray-600 mb-4">Price: ${project.price}</p>
+          <h2 className="text-xl font-bold mb-4">Custom Request</h2>
+          <p className="text-gray-600 mb-2">
+            Description: {request.description}
+          </p>
+          <p className="text-gray-600 mb-2">
+            Total Price: ${request.total_price}
+          </p>
+          <p className="text-gray-600 mb-4">
+            Already Paid: ${request.paid_amount} <br />
+            Remaining: ${remaining}
+          </p>
 
           <label className="flex items-center mb-4 p-3 bg-gray-50 rounded-lg">
             <input
@@ -43,7 +57,7 @@ export default function PurchaseModal({ project, onClose }) {
               onChange={(e) => setTerms(e.target.checked)}
             />
             <span className="ml-2 text-sm">
-              I accept the terms and conditions for purchasing this project.
+              I accept the terms and conditions for this custom request.
             </span>
           </label>
 
@@ -52,11 +66,10 @@ export default function PurchaseModal({ project, onClose }) {
               style={{ layout: "vertical" }}
               createOrder={async () => {
                 try {
-                  const { id } = await createPayPalOrder(
-                    project.id,
-                    project.price
+                  const { id } = await createPayPalOrderCustomRequest(
+                    request.id
                   );
-                  return id; // PayPal expects "id"
+                  return id;
                 } catch (err) {
                   toast.error("Failed to create PayPal order");
                   console.error(err);
@@ -64,13 +77,10 @@ export default function PurchaseModal({ project, onClose }) {
               }}
               onApprove={async (data) => {
                 try {
-                  // Always pass order_id key, backend expects this
                   await capturePayPalOrder(data.orderID);
-                  toast.success("Payment successful!");
+                  toast.success("Deposit paid successful!");
                   onClose();
-
-                  // Redirect to project details
-                  window.location.href = `/project/${project.id}`;
+                  window.location.href = `/request/${request.id}`;
                 } catch (err) {
                   toast.error("Payment capture failed");
                   console.error(err);
