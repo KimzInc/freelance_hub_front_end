@@ -1,69 +1,61 @@
-// import { useEffect, useState } from "react";
+// import { useEffect, useState, useContext } from "react";
 // import { Link } from "react-router-dom";
-// import { getProfile } from "../components/services/requests";
+// import { AuthContext } from "../context/AuthContext";
+// import { getProfile, getMyRequests } from "../components/services/requests";
+// import LoadingSpinner from "../components/common/LoadingSpinner";
 
 // export default function Profile() {
+//   const { user: authUser } = useContext(AuthContext);
 //   const [profile, setProfile] = useState(null);
+//   const [stats, setStats] = useState({
+//     totalRequests: 0,
+//     completedRequests: 0,
+//     inProgressRequests: 0,
+//   });
 //   const [loading, setLoading] = useState(true);
 //   const [error, setError] = useState("");
 
-//   useEffect(() => {
-//     async function fetchProfile() {
-//       try {
-//         const data = await getProfile();
-//         setProfile(data);
-//       } catch (err) {
-//         console.error("Failed to fetch profile:", err);
-//         setError(err.response?.data?.error || "Could not fetch profile.");
-//       } finally {
-//         setLoading(false);
-//       }
+// useEffect(() => {
+//   async function fetchProfileData() {
+//     try {
+//       setLoading(true);
+//       const [profileData, requestsData] = await Promise.all([
+//         getProfile(),
+//         getMyRequests(),
+//       ]);
+
+//       setProfile(profileData);
+
+//       // Calculate stats from requests
+//       const requests = Array.isArray(requestsData)
+//         ? requestsData
+//         : requestsData.results || [];
+//       const completed = requests.filter(
+//         (req) => req.status === "COMPLETED"
+//       ).length;
+//       const inProgress = requests.filter(
+//         (req) => req.status === "IN_PROGRESS"
+//       ).length;
+
+//       setStats({
+//         totalRequests: requests.length,
+//         completedRequests: completed,
+//         inProgressRequests: inProgress,
+//       });
+//     } catch (err) {
+//       console.error("Failed to fetch profile:", err);
+//       setError(err.response?.data?.error || "Could not fetch profile data.");
+//     } finally {
+//       setLoading(false);
 //     }
-//     fetchProfile();
-//   }, []);
-
-//   if (loading) {
-//     return (
-//       <div className="flex justify-center items-center h-64">
-//         <p className="text-gray-500 animate-pulse">Loading profile…</p>
-//       </div>
-//     );
 //   }
-
-//   if (error) {
-//     return <p className="p-6 text-red-600">{error}</p>;
-//   }
-
-//   if (!profile) {
-//     return <p className="p-6">No profile found.</p>;
-//   }
-
-//   return (
-//     <div className="max-w-md mx-auto mt-10 p-6 bg-white shadow rounded space-y-4">
-//       <h1 className="text-2xl font-bold">My Profile</h1>
-//       <p>
-//         <span className="font-medium">Username:</span> {profile.username}
-//       </p>
-//       <p>
-//         <span className="font-medium">Email:</span> {profile.email}
-//       </p>
-
-//       <div className="pt-4">
-//         <Link
-//           to="/profile/edit"
-//           className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-//         >
-//           Edit Profile
-//         </Link>
-//       </div>
-//     </div>
-//   );
-// }
-
+//   fetchProfileData();
+// }, []);
 import { useEffect, useState, useContext } from "react";
 import { Link } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import { getProfile, getMyRequests } from "../components/services/requests";
+import { getMyFreelancerProjects } from "../components/services/projects"; //
 import LoadingSpinner from "../components/common/LoadingSpinner";
 
 export default function Profile() {
@@ -81,17 +73,25 @@ export default function Profile() {
     async function fetchProfileData() {
       try {
         setLoading(true);
-        const [profileData, requestsData] = await Promise.all([
-          getProfile(),
-          getMyRequests(),
-        ]);
 
+        // Always fetch profile
+        const profileData = await getProfile();
         setProfile(profileData);
 
-        // Calculate stats from requests
-        const requests = Array.isArray(requestsData)
-          ? requestsData
-          : requestsData.results || [];
+        let requests = [];
+        if (profileData.role === "CLIENT") {
+          const requestsData = await getMyRequests();
+          requests = Array.isArray(requestsData)
+            ? requestsData
+            : requestsData.results || [];
+        } else if (profileData.role === "FREELANCER") {
+          const projectsData = await getMyFreelancerProjects();
+          requests = Array.isArray(projectsData)
+            ? projectsData
+            : projectsData.results || [];
+        }
+
+        // Calculate stats
         const completed = requests.filter(
           (req) => req.status === "COMPLETED"
         ).length;
@@ -180,7 +180,9 @@ export default function Profile() {
           <div className="text-3xl font-bold text-blue-600 mb-2">
             {stats.totalRequests}
           </div>
-          <div className="text-sm text-gray-600">Total Requests</div>
+          <div className="text-sm text-gray-600">
+            {profile.role === "CLIENT" ? "Total Requests" : "Total Projects"}
+          </div>
         </div>
         <div className="card text-center">
           <div className="text-3xl font-bold text-green-600 mb-2">
@@ -235,6 +237,7 @@ export default function Profile() {
       <div className="card">
         <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Common actions (available for all users) */}
           <Link
             to="/profile/edit"
             className="flex flex-col items-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors group"
@@ -244,6 +247,7 @@ export default function Profile() {
               Edit Profile
             </span>
           </Link>
+
           <Link
             to="/change-password"
             className="flex flex-col items-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors group"
@@ -253,24 +257,55 @@ export default function Profile() {
               Change Password
             </span>
           </Link>
-          <Link
-            to="/my-requests"
-            className="flex flex-col items-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors group"
-          >
-            <div className="text-2xl mb-2 group-hover:text-blue-600">📋</div>
-            <span className="text-sm font-medium text-gray-700 group-hover:text-blue-600">
-              My Requests
-            </span>
-          </Link>
-          <Link
-            to="/custom-request"
-            className="flex flex-col items-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors group"
-          >
-            <div className="text-2xl mb-2 group-hover:text-blue-600">➕</div>
-            <span className="text-sm font-medium text-gray-700 group-hover:text-blue-600">
-              New Request
-            </span>
-          </Link>
+
+          {/* Client-only actions */}
+          {profile.role === "CLIENT" && (
+            <>
+              <Link
+                to="/my-requests"
+                className="flex flex-col items-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors group"
+              >
+                <div className="text-2xl mb-2 group-hover:text-blue-600">
+                  📋
+                </div>
+                <span className="text-sm font-medium text-gray-700 group-hover:text-blue-600">
+                  My Requests
+                </span>
+              </Link>
+              <Link
+                to="/custom-request"
+                className="flex flex-col items-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors group"
+              >
+                <div className="text-2xl mb-2 group-hover:text-blue-600">
+                  ➕
+                </div>
+                <span className="text-sm font-medium text-gray-700 group-hover:text-blue-600">
+                  New Request
+                </span>
+              </Link>
+            </>
+          )}
+
+          {/* Freelancer-only actions (only if approved) */}
+          {profile.role === "FREELANCER" && profile.is_approved && (
+            <Link
+              to="/freelancer/dashboard"
+              className="flex flex-col items-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors group"
+            >
+              <div className="text-2xl mb-2 group-hover:text-blue-600">💼</div>
+              <span className="text-sm font-medium text-gray-700 group-hover:text-blue-600">
+                My Projects
+              </span>
+            </Link>
+          )}
+
+          {/* Freelancer not approved yet → disabled card */}
+          {profile.role === "FREELANCER" && !profile.is_approved && (
+            <div className="flex flex-col items-center p-4 border-2 border-dashed border-gray-200 rounded-lg bg-gray-50 text-gray-400 cursor-not-allowed">
+              <div className="text-2xl mb-2">⏳</div>
+              <span className="text-sm font-medium">Awaiting Approval</span>
+            </div>
+          )}
         </div>
       </div>
 

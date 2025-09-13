@@ -1,5 +1,5 @@
 import { createContext, useState, useEffect } from "react";
-import { getToken, clearToken } from "../components/utils/storage";
+import { getToken, clearToken, setToken } from "../components/utils/storage";
 import { getProfile } from "../components/services/requests";
 
 export const AuthContext = createContext();
@@ -8,15 +8,16 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Load user from token on refresh
   useEffect(() => {
     async function fetchUser() {
       if (getToken()) {
         try {
-          const profile = await getProfile(); // fetch from backend
-          setUser(profile); // example: { username, email }
+          const profile = await getProfile(); // ✅ backend profile always has role
+          setUser(profile);
         } catch (err) {
           console.error("Failed to fetch user profile:", err);
-          clearToken(); // invalid/expired token → logout
+          clearToken();
           setUser(null);
         }
       }
@@ -25,9 +26,11 @@ export function AuthProvider({ children }) {
     fetchUser();
   }, []);
 
-  const login = (user, token) => {
-    localStorage.setItem("access", token);
-    setUser(user);
+  const login = (data) => {
+    // data = { access, refresh, user: {id, username, email} }
+    setToken(data.access);
+    if (data.refresh) localStorage.setItem("refresh", data.refresh);
+    setUser(data.user);
   };
 
   const logout = () => {
@@ -36,7 +39,7 @@ export function AuthProvider({ children }) {
   };
 
   if (loading) {
-    return <p>Loading...</p>; // optional: splash screen/spinner
+    return <p>Loading...</p>; // or a spinner
   }
 
   return (

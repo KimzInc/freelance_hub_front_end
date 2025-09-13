@@ -16,6 +16,7 @@ import ChangePasswordForm from "./pages/ChangePasswordForm";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { PayPalScriptProvider } from "@paypal/react-paypal-js";
+import FreelancerDashboard from "./pages/FreelancerDashboard";
 
 const RouteErrorBoundary = ({ children }) => (
   <ErrorBoundary
@@ -68,6 +69,10 @@ export default function App() {
                         <Register />
                       </RouteErrorBoundary>
                     }
+                  />
+                  <Route
+                    path="/freelancer/dashboard"
+                    element={<FreelancerDashboard />}
                   />
                   <Route
                     path="/project/:id"

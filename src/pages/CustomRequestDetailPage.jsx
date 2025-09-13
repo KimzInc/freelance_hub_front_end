@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useParams } from "react-router-dom";
 import { getCustomRequest } from "../components/services/requests";
+import ChatBox from "../components/chat/ChatBox";
 
 export default function CustomRequestDetailPage() {
   const { id } = useParams();
@@ -231,6 +232,9 @@ export default function CustomRequestDetailPage() {
         >
           ← Back to My Requests
         </Link>
+      </div>
+      <div className="mt-8">
+        <ChatBox requestId={id} />
       </div>
     </div>
   );

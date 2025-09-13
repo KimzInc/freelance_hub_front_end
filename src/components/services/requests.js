@@ -56,3 +56,15 @@ export async function changePassword(data) {
   const response = await api.post("/change-password/", data);
   return response.data;
 }
+
+// Fetch messages for a custom request
+export async function getMessages(requestId) {
+  const res = await api.get(`/request/${requestId}/messages/`);
+  return res.data;
+}
+
+// Post a new message
+export async function sendMessage(requestId, content) {
+  const res = await api.post(`/request/${requestId}/messages/`, { content });
+  return res.data;
+}

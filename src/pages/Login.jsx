@@ -60,9 +60,21 @@ export default function Login() {
         password: form.password,
       });
 
-      login(data.user, data.access);
+      login(data);
       toast.success(`Welcome back, ${data.user.username}!`);
-      navigate("/");
+
+      // role-based redirect
+      if (data.user.role === "CLIENT") {
+        navigate("/my-requests");
+      } else if (data.user.role === "FREELANCER") {
+        if (data.user.is_approved) {
+          navigate("/freelancer/dashboard");
+        } else {
+          navigate("/freelancer/pending"); // a simple "wait for approval" page
+        }
+      } else {
+        navigate("/"); // fallback
+      }
     } catch (err) {
       console.error("Login error:", err);
 

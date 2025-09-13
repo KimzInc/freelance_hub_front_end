@@ -57,6 +57,7 @@ export default function Header() {
               </span>
             </button>
 
+            {/* {* /// Add open ///*} */}
             {open && (
               <div className="absolute right-0 mt-2 w-56 bg-white text-gray-800 border rounded-lg shadow-xl z-50 overflow-hidden">
                 <div className="p-3 border-b bg-gray-50">
@@ -64,14 +65,42 @@ export default function Header() {
                   <p className="text-sm text-gray-600">{user.email}</p>
                 </div>
 
-                <Link
-                  to="/my-requests"
-                  className="flex items-center px-4 py-3 hover:bg-gray-100 transition-colors"
-                  onClick={() => setOpen(false)}
-                >
-                  <span className="mr-2">📋</span>
-                  My Requests
-                </Link>
+                {/* ✅ Role-based navigation */}
+                {user.role === "CLIENT" && (
+                  <Link
+                    to="/my-requests"
+                    className="flex items-center px-4 py-3 hover:bg-gray-100 transition-colors"
+                    onClick={() => setOpen(false)}
+                  >
+                    <span className="mr-2">📋</span>
+                    My Requests
+                  </Link>
+                )}
+
+                {user.role === "FREELANCER" && (
+                  <>
+                    {user.is_approved ? (
+                      <Link
+                        to="/freelancer/dashboard"
+                        className="flex items-center px-4 py-3 hover:bg-gray-100 transition-colors"
+                        onClick={() => setOpen(false)}
+                      >
+                        <span className="mr-2">💼</span>
+                        Dashboard
+                      </Link>
+                    ) : (
+                      <Link
+                        to="/freelancer/pending"
+                        className="flex items-center px-4 py-3 hover:bg-gray-100 transition-colors"
+                        onClick={() => setOpen(false)}
+                      >
+                        <span className="mr-2">⏳</span>
+                        Pending Approval
+                      </Link>
+                    )}
+                  </>
+                )}
+
                 <Link
                   to="/profile"
                   className="flex items-center px-4 py-3 hover:bg-gray-100 transition-colors"

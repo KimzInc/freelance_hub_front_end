@@ -75,3 +75,21 @@ export async function createPayPalOrderCustomRequest(requestId) {
   });
   return res.data;
 }
+
+// Claim a project (freelancer accepts a request)
+export async function claimProject(requestId) {
+  const res = await api.post(`/request/${requestId}/claim/`);
+  return res.data;
+}
+
+// Get projects available for freelancers (not yet claimed)
+export async function getFreelancerProjects() {
+  const res = await api.get("/freelancer/projects/");
+  return res.data;
+}
+
+// Get projects assigned to this freelancer
+export async function getMyFreelancerProjects() {
+  const res = await api.get("/me/projects/");
+  return res.data;
+}
