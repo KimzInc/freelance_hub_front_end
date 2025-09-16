@@ -36,6 +36,16 @@ export default function Header() {
           Home
         </Link>
 
+        {/* Add this section for unapproved freelancers */}
+        {user && user.role === "FREELANCER" && !user.is_approved && (
+          <Link
+            to="/pending-approval"
+            className="hover:text-blue-300 transition-colors"
+          >
+            Pending Approval
+          </Link>
+        )}
+
         {user ? (
           <div className="relative user-menu">
             <button
@@ -57,7 +67,6 @@ export default function Header() {
               </span>
             </button>
 
-            {/* {* /// Add open ///*} */}
             {open && (
               <div className="absolute right-0 mt-2 w-56 bg-white text-gray-800 border rounded-lg shadow-xl z-50 overflow-hidden">
                 <div className="p-3 border-b bg-gray-50">
@@ -66,6 +75,17 @@ export default function Header() {
                 </div>
 
                 {/* ✅ Role-based navigation */}
+                {user.role === "ADMIN" && (
+                  <Link
+                    to="/admin/freelancer-approval"
+                    className="flex items-center px-4 py-3 hover:bg-gray-100 transition-colors"
+                    onClick={() => setOpen(false)}
+                  >
+                    <span className="mr-2">👨‍💼</span>
+                    Admin Panel
+                  </Link>
+                )}
+
                 {user.role === "CLIENT" && (
                   <Link
                     to="/my-requests"
@@ -90,7 +110,7 @@ export default function Header() {
                       </Link>
                     ) : (
                       <Link
-                        to="/freelancer/pending"
+                        to="/pending-approval"
                         className="flex items-center px-4 py-3 hover:bg-gray-100 transition-colors"
                         onClick={() => setOpen(false)}
                       >

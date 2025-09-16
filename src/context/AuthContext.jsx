@@ -13,7 +13,7 @@ export function AuthProvider({ children }) {
     async function fetchUser() {
       if (getToken()) {
         try {
-          const profile = await getProfile(); // ✅ backend profile always has role
+          const profile = await getProfile();
           setUser(profile);
         } catch (err) {
           console.error("Failed to fetch user profile:", err);
@@ -26,10 +26,15 @@ export function AuthProvider({ children }) {
     fetchUser();
   }, []);
 
-  const login = (data) => {
-    // data = { access, refresh, user: {id, username, email} }
+  const updateUser = (newData) => {
+    setUser((prev) => ({ ...prev, ...newData }));
+  };
+
+  const login = async (data) => {
     setToken(data.access);
     if (data.refresh) localStorage.setItem("refresh", data.refresh);
+
+    // Set user data directly from login response, don't make additional API calls
     setUser(data.user);
   };
 
@@ -39,11 +44,11 @@ export function AuthProvider({ children }) {
   };
 
   if (loading) {
-    return <p>Loading...</p>; // or a spinner
+    return <p>Loading...</p>;
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, login, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

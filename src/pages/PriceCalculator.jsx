@@ -5,7 +5,7 @@ export default function PriceCalculator() {
   const [pages, setPages] = useState(1);
   const [timeframe, setTimeframe] = useState(24);
   const [price, setPrice] = useState(0);
-  const [pricePerPage, setPricePerPage] = useState(20);
+  const [pricePerPage, setPricePerPage] = useState(17);
 
   // Calculate price whenever inputs change
   useEffect(() => {

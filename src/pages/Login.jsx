@@ -1,4 +1,4 @@
-import { useState, useContext } from "react";
+import { useState, useContext, useEffect } from "react";
 import { AuthContext } from "../context/AuthContext";
 import { loginUser } from "../components/services/auth";
 import { useNavigate, Link } from "react-router-dom";
@@ -10,6 +10,12 @@ import LoadingSpinner from "../components/common/LoadingSpinner";
 export default function Login() {
   const { login } = useContext(AuthContext);
   const navigate = useNavigate();
+
+  // Clear any existing tokens when the login page loads
+  useEffect(() => {
+    localStorage.removeItem("access");
+    localStorage.removeItem("refresh");
+  }, []);
 
   const [form, setForm] = useState({
     username: "",
@@ -63,6 +69,7 @@ export default function Login() {
       login(data);
       toast.success(`Welcome back, ${data.user.username}!`);
 
+      // Use the user data from the login response directly
       // role-based redirect
       if (data.user.role === "CLIENT") {
         navigate("/my-requests");
@@ -70,19 +77,17 @@ export default function Login() {
         if (data.user.is_approved) {
           navigate("/freelancer/dashboard");
         } else {
-          navigate("/freelancer/pending"); // a simple "wait for approval" page
+          navigate("/pending-approval");
         }
       } else {
-        navigate("/"); // fallback
+        navigate("/");
       }
     } catch (err) {
       console.error("Login error:", err);
-
       const errorMessage =
         err.response?.data?.error ||
         err.response?.data?.message ||
         "Invalid username or password";
-
       setErrors({ submit: errorMessage });
       toast.error("Login failed");
     } finally {

@@ -68,3 +68,8 @@ export async function sendMessage(requestId, content) {
   const res = await api.post(`/request/${requestId}/messages/`, { content });
   return res.data;
 }
+
+export async function checkApproval() {
+  const response = await api.get("/check-approval/");
+  return response.data;
+}

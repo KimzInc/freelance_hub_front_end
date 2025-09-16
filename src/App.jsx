@@ -17,15 +17,16 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { PayPalScriptProvider } from "@paypal/react-paypal-js";
 import FreelancerDashboard from "./pages/FreelancerDashboard";
+import ProtectedRoute from "./components/common/ProtectedRoute";
+import PendingApproval from "./pages/PendingApproval";
+import AdminFreelancerApproval from "./pages/AdminFreelancerApproval";
 
 const RouteErrorBoundary = ({ children }) => (
   <ErrorBoundary
     onError={(error, errorInfo) => {
-      // You can send errors to your monitoring service here
       console.log("Route error captured:", error.message);
     }}
     onReset={() => {
-      // Custom reset logic for routes
       window.scrollTo(0, 0);
     }}
   >
@@ -43,7 +44,6 @@ export default function App() {
           <BrowserRouter>
             <div className="flex flex-col min-h-screen bg-gray-50">
               <Header />
-
               <main className="flex-grow">
                 <Routes>
                   <Route
@@ -71,8 +71,37 @@ export default function App() {
                     }
                   />
                   <Route
+                    path="/pending-approval"
+                    element={
+                      <RouteErrorBoundary>
+                        <PendingApproval />
+                      </RouteErrorBoundary>
+                    }
+                  />
+
+                  <Route
+                    path="/admin/freelancer-approval"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute requiredRole="ADMIN">
+                          <AdminFreelancerApproval />
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
+
+                  <Route
                     path="/freelancer/dashboard"
-                    element={<FreelancerDashboard />}
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute
+                          requiredRole="FREELANCER"
+                          requireApproval
+                        >
+                          <FreelancerDashboard />
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
                   />
                   <Route
                     path="/project/:id"
@@ -86,7 +115,9 @@ export default function App() {
                     path="/custom-request"
                     element={
                       <RouteErrorBoundary>
-                        <CustomRequest />
+                        <ProtectedRoute>
+                          <CustomRequest />
+                        </ProtectedRoute>
                       </RouteErrorBoundary>
                     }
                   />
@@ -94,7 +125,9 @@ export default function App() {
                     path="/request/:id"
                     element={
                       <RouteErrorBoundary>
-                        <CustomRequestDetailPage />
+                        <ProtectedRoute>
+                          <CustomRequestDetailPage />
+                        </ProtectedRoute>
                       </RouteErrorBoundary>
                     }
                   />
@@ -102,7 +135,9 @@ export default function App() {
                     path="/my-requests"
                     element={
                       <RouteErrorBoundary>
-                        <MyRequests />
+                        <ProtectedRoute>
+                          <MyRequests />
+                        </ProtectedRoute>
                       </RouteErrorBoundary>
                     }
                   />
@@ -110,7 +145,9 @@ export default function App() {
                     path="/profile"
                     element={
                       <RouteErrorBoundary>
-                        <Profile />
+                        <ProtectedRoute>
+                          <Profile />
+                        </ProtectedRoute>
                       </RouteErrorBoundary>
                     }
                   />
@@ -118,7 +155,9 @@ export default function App() {
                     path="/profile/edit"
                     element={
                       <RouteErrorBoundary>
-                        <ProfileForm />
+                        <ProtectedRoute>
+                          <ProfileForm />
+                        </ProtectedRoute>
                       </RouteErrorBoundary>
                     }
                   />
@@ -126,13 +165,14 @@ export default function App() {
                     path="/change-password"
                     element={
                       <RouteErrorBoundary>
-                        <ChangePasswordForm />
+                        <ProtectedRoute>
+                          <ChangePasswordForm />
+                        </ProtectedRoute>
                       </RouteErrorBoundary>
                     }
                   />
                 </Routes>
               </main>
-
               <Footer />
             </div>
             <ToastContainer
