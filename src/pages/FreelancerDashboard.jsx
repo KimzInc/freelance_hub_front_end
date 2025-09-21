@@ -1,5 +1,6 @@
 import { useEffect, useState, useContext, useCallback } from "react";
 import { AuthContext } from "../context/AuthContext";
+import FreelancerProjectCard from "./FreelancerProjectCard";
 import {
   getFreelancerProjects,
   claimProject,
@@ -189,25 +190,7 @@ export default function FreelancerDashboard() {
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {myProjects.map((project) => (
-                <div
-                  key={project.id}
-                  className="border p-4 rounded-lg shadow-sm bg-white"
-                >
-                  <h4 className="font-bold text-lg mb-2">{project.title}</h4>
-                  <p className="text-gray-600 mb-3">
-                    {project.description?.slice(0, 120)}...
-                  </p>
-                  <div className="text-sm text-gray-500 mb-3">
-                    <p>Status: {project.status}</p>
-                    <p>
-                      Deadline:{" "}
-                      {new Date(project.deadline).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <p className="font-semibold">
-                    Client: {project.client_display_name}
-                  </p>
-                </div>
+                <FreelancerProjectCard key={project.id} project={project} />
               ))}
             </div>
           )}

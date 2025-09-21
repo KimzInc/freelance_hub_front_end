@@ -57,17 +57,26 @@ export async function changePassword(data) {
   return response.data;
 }
 
-// Fetch messages for a custom request
 export async function getMessages(requestId) {
-  const res = await api.get(`/request/${requestId}/messages/`);
-  return res.data;
+  const token = localStorage.getItem("access");
+  const res = await fetch(
+    `${process.env.REACT_APP_API_URL}/request/${requestId}/messages/`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+  if (!res.ok) throw new Error("Failed to load messages");
+  return res.json();
 }
 
-// Post a new message
-export async function sendMessage(requestId, content) {
-  const res = await api.post(`/request/${requestId}/messages/`, { content });
-  return res.data;
-}
+export const sendMessage = async (requestId, content) => {
+  const response = await api.post(`/request/${requestId}/messages/`, {
+    content,
+  });
+  return response.data;
+};
 
 export async function checkApproval() {
   const response = await api.get("/check-approval/");

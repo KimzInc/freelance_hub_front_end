@@ -1,12 +1,10 @@
-import { useEffect, useState, useContext } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { AuthContext } from "../context/AuthContext";
 import { getProfile, getMyRequests } from "../components/services/requests";
 import { getMyFreelancerProjects } from "../components/services/projects"; //
 import LoadingSpinner from "../components/common/LoadingSpinner";
 
 export default function Profile() {
-  const { user: authUser } = useContext(AuthContext);
   const [profile, setProfile] = useState(null);
   const [stats, setStats] = useState({
     totalRequests: 0,
