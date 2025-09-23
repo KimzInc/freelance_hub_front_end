@@ -29,11 +29,19 @@ export default function Register() {
 
   const validate = () => {
     const newErrors = {};
+
     if (!form.username.trim()) newErrors.username = "Username is required";
+    else if (form.username.length < 3)
+      newErrors.username = "Username must be at least 3 characters";
+
     if (!form.email.trim()) newErrors.email = "Email is required";
+    else if (!/\S+@\S+\.\S+/.test(form.email))
+      newErrors.email = "Email address is invalid";
+
     if (!form.password) newErrors.password = "Password is required";
     else if (form.password.length < 8)
       newErrors.password = "Password must be at least 8 characters";
+
     if (!role) newErrors.role = "Please choose your role";
 
     setErrors(newErrors);
@@ -48,22 +56,24 @@ export default function Register() {
       setLoading(true);
       setErrors({});
 
-      //const data =
       await registerUser({
         ...form,
         role,
       });
 
       toast.success(
-        role === "CLIENT"
-          ? "Account created! You can now post projects 🎉"
-          : "Account created! Please wait for admin approval ✅"
+        `Registration successful! Please check your email (${form.email}) for verification instructions.`
       );
 
-      navigate("/login");
+      // Redirect to a page that explains what to do next
+      navigate("/verify-email-pending", {
+        state: { email: form.email, role: role },
+      });
     } catch (err) {
       console.error("Registration error:", err);
-      setErrors({ submit: "Registration failed. Try again." });
+      const errorMessage =
+        err.response?.data?.error || "Registration failed. Try again.";
+      setErrors({ submit: errorMessage });
       toast.error("Registration failed");
     } finally {
       setLoading(false);

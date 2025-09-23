@@ -20,6 +20,8 @@ import FreelancerDashboard from "./pages/FreelancerDashboard";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import PendingApproval from "./pages/PendingApproval";
 import AdminFreelancerApproval from "./pages/AdminFreelancerApproval";
+import EmailVerification from "./pages/EmailVerification";
+import VerifyEmailPending from "./pages/VerifyEmailPending";
 
 const RouteErrorBoundary = ({ children }) => (
   <ErrorBoundary
@@ -63,6 +65,22 @@ export default function App() {
                     }
                   />
                   <Route
+                    path="/verify-email/:token"
+                    element={
+                      <RouteErrorBoundary>
+                        <EmailVerification />{" "}
+                      </RouteErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/verify-email-pending"
+                    element={
+                      <RouteErrorBoundary>
+                        <VerifyEmailPending />
+                      </RouteErrorBoundary>
+                    }
+                  />
+                  <Route
                     path="/register"
                     element={
                       <RouteErrorBoundary>
@@ -78,7 +96,6 @@ export default function App() {
                       </RouteErrorBoundary>
                     }
                   />
-
                   <Route
                     path="/admin/freelancer-approval"
                     element={
@@ -89,7 +106,6 @@ export default function App() {
                       </RouteErrorBoundary>
                     }
                   />
-
                   <Route
                     path="/freelancer/dashboard"
                     element={

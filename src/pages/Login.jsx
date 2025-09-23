@@ -66,6 +66,12 @@ export default function Login() {
         password: form.password,
       });
 
+      // DEBUG: Check what we're receiving
+      console.log("🔍 Login response data:", data);
+      console.log("🔍 User is_active status:", data.user?.is_active);
+
+      // Remove the is_active check - backend handles unverified/inactive users
+
       login(data);
       toast.success(`Welcome back, ${data.user.username}!`);
 
@@ -84,11 +90,26 @@ export default function Login() {
       }
     } catch (err) {
       console.error("Login error:", err);
+
+      // The backend will return an error if the user is not active
+      // Let the backend error message handle this
       const errorMessage =
+        err.response?.data?.detail || // JWT error format
         err.response?.data?.error ||
-        err.response?.data?.message ||
+        err.message ||
         "Invalid username or password";
+
       setErrors({ submit: errorMessage });
+
+      // If it's an unverified email error, offer to resend verification
+      if (
+        errorMessage.includes("verify your email") ||
+        errorMessage.includes("not active") ||
+        errorMessage.includes("unverified")
+      ) {
+        navigate("/verify-email-pending", { state: { email: form.username } });
+      }
+
       toast.error("Login failed");
     } finally {
       setLoading(false);
