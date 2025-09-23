@@ -52,8 +52,6 @@ export async function downloadProject(projectId, projectTitle) {
   return res.data;
 }
 
-////// PAYPAL ////////////////
-
 export async function createPayPalOrder(projectId, amount) {
   const res = await api.post("/payments/paypal/create-order/", {
     project_id: projectId,
