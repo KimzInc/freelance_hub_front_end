@@ -1,19 +1,49 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import {
   verifyEmail,
   resendVerificationEmail,
 } from "../components/services/auth";
-import { toast } from "react-toastify";
+import {
+  showSuccessToast,
+  showErrorToast,
+} from "../components/common/EnhancedToast";
 import AuthFormContainer from "../components/common/AuthFormContainer";
-import LoadingSpinner from "../components/common/LoadingSpinner";
+import EnhancedLoadingSpinner from "../components/common/EnhancedLoadingSpinner";
 
-export default function EmailVerification() {
+export default function EnhancedEmailVerification() {
   const { token } = useParams();
   const navigate = useNavigate();
-  const [status, setStatus] = useState("verifying"); // verifying, success, error, resend
+  const [status, setStatus] = useState("verifying");
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resendCount, setResendCount] = useState(0);
+  const [cooldown, setCooldown] = useState(0);
+  const [userData, setUserData] = useState(null); // Store user data for the button
+
+  // Define redirectUser with useCallback to stabilize the reference
+  const redirectUser = useCallback(
+    (user) => {
+      if (user?.role === "CLIENT") {
+        navigate("/my-requests");
+      } else if (user?.role === "FREELANCER") {
+        navigate(
+          user.is_approved ? "/freelancer/dashboard" : "/pending-approval"
+        );
+      } else {
+        navigate("/");
+      }
+    },
+    [navigate]
+  );
+
+  // Cooldown timer for resend
+  useEffect(() => {
+    if (cooldown > 0) {
+      const timer = setTimeout(() => setCooldown(cooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [cooldown]);
 
   useEffect(() => {
     const verifyToken = async (token) => {
@@ -21,31 +51,32 @@ export default function EmailVerification() {
         setLoading(true);
         const data = await verifyEmail(token);
 
-        // Store tokens and user data from successful verification
         localStorage.setItem("access", data.access);
         localStorage.setItem("refresh", data.refresh);
 
-        setStatus("success");
-        toast.success(data.message || "Email verified successfully!");
+        // Store user data for the button
+        setUserData(data.user);
+        localStorage.setItem("userData", JSON.stringify(data.user));
 
-        // Redirect after a delay
-        setTimeout(() => {
-          if (data.user.role === "CLIENT") {
-            navigate("/my-requests");
-          } else if (data.user.role === "FREELANCER") {
-            navigate(
-              data.user.is_approved
-                ? "/freelancer/dashboard"
-                : "/pending-approval"
-            );
-          } else {
-            navigate("/");
+        setStatus("success");
+        showSuccessToast(data.message || "Email verified successfully!");
+
+        // Auto-redirect with progress indicator
+        let countdown = 5;
+        const countdownInterval = setInterval(() => {
+          countdown--;
+          if (countdown === 0) {
+            clearInterval(countdownInterval);
+            redirectUser(data.user);
           }
-        }, 3000);
+        }, 1000);
+
+        // Cleanup interval on component unmount
+        return () => clearInterval(countdownInterval);
       } catch (error) {
         console.error("Verification error:", error);
         setStatus("error");
-        toast.error(error.response?.data?.error || "Verification failed");
+        showErrorToast(error.response?.data?.error || "Verification failed");
       } finally {
         setLoading(false);
       }
@@ -54,22 +85,20 @@ export default function EmailVerification() {
     if (token) {
       verifyToken(token);
     }
-  }, [token, navigate]);
+  }, [token, redirectUser]);
 
-  const handleResendEmail = async (e) => {
-    e.preventDefault();
-    if (!email.trim()) {
-      toast.error("Please enter your email address");
-      return;
-    }
+  const handleResendEmail = async () => {
+    if (!email.trim() || cooldown > 0) return;
 
     try {
       setLoading(true);
       await resendVerificationEmail(email);
+      setResendCount((prev) => prev + 1);
+      setCooldown(60);
+      showSuccessToast("Verification email sent successfully!");
       setStatus("resend_success");
-      toast.success("Verification email sent successfully!");
     } catch (error) {
-      toast.error(
+      showErrorToast(
         error.response?.data?.error || "Failed to send verification email"
       );
     } finally {
@@ -77,152 +106,155 @@ export default function EmailVerification() {
     }
   };
 
+  const VerificationSuccess = () => (
+    <div className="text-center space-y-6">
+      <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto success-animation">
+        <svg
+          className="w-10 h-10 text-green-600"
+          fill="currentColor"
+          viewBox="0 0 20 20"
+        >
+          <path
+            fillRule="evenodd"
+            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+            clipRule="evenodd"
+          />
+        </svg>
+      </div>
+
+      <div>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          Email Verified Successfully!
+        </h2>
+        <p className="text-gray-600 mb-4">
+          Redirecting you to the dashboard in 5 seconds...
+        </p>
+
+        <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
+          <div className="bg-green-600 h-2 rounded-full progress-bar"></div>
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        <button
+          onClick={() => {
+            // Use userData from state or fallback to localStorage
+            if (userData) {
+              redirectUser(userData);
+            } else {
+              const storedUser = localStorage.getItem("userData");
+              if (storedUser) {
+                redirectUser(JSON.parse(storedUser));
+              }
+            }
+          }}
+          className="btn-primary w-full"
+        >
+          Go to Dashboard Now
+        </button>
+        <Link to="/login" className="block text-blue-600 hover:underline">
+          Or return to login
+        </Link>
+      </div>
+    </div>
+  );
+
+  const ResendForm = () => (
+    <div className="space-y-6">
+      <div className="text-center">
+        <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg
+            className="w-8 h-8 text-blue-600"
+            fill="currentColor"
+            viewBox="0 0 20 20"
+          >
+            <path
+              fillRule="evenodd"
+              d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v3.586L7.707 9.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 10.586V7z"
+              clipRule="evenodd"
+            />
+          </svg>
+        </div>
+        <h3 className="text-lg font-semibold text-gray-900">
+          Resend Verification Email
+        </h3>
+      </div>
+
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleResendEmail();
+        }}
+        className="space-y-4"
+      >
+        <div>
+          <label
+            htmlFor="email"
+            className="block text-sm font-medium text-gray-700 mb-2"
+          >
+            Email Address
+          </label>
+          <input
+            type="email"
+            id="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="input-field w-full"
+            placeholder="Enter your email"
+            required
+          />
+        </div>
+
+        <button
+          type="submit"
+          disabled={loading || cooldown > 0}
+          className="btn-primary w-full disabled:opacity-50"
+        >
+          {loading
+            ? "Sending..."
+            : cooldown > 0
+            ? `Resend available in ${cooldown}s`
+            : "Resend Verification Email"}
+        </button>
+      </form>
+
+      {resendCount > 0 && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <p className="text-yellow-800 text-sm">
+            <strong>Tip:</strong> Check your spam folder if you don't see the
+            email.
+            {resendCount >= 2 &&
+              " You may want to try a different email address."}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+
   if (loading) {
     return (
-      <AuthFormContainer title="Verifying Email...">
-        <LoadingSpinner text="Verifying your email..." />
-      </AuthFormContainer>
-    );
-  }
-
-  if (status === "success") {
-    return (
-      <AuthFormContainer title="Email Verified!">
-        <div className="text-center space-y-4">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-            <svg
-              className="w-8 h-8 text-green-600"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
-          </div>
-          <h2 className="text-2xl font-bold text-gray-900">
-            Email Verified Successfully!
-          </h2>
-          <p className="text-gray-600">
-            Your account has been activated. Redirecting you to the dashboard...
-          </p>
-          <div className="pt-4">
-            <Link to="/login" className="text-blue-600 hover:underline">
-              Or click here to login
-            </Link>
-          </div>
-        </div>
-      </AuthFormContainer>
-    );
-  }
-
-  if (status === "error") {
-    return (
-      <AuthFormContainer title="Verification Failed">
-        <div className="text-center space-y-4">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto">
-            <svg
-              className="w-8 h-8 text-red-600"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </div>
-          <h2 className="text-2xl font-bold text-gray-900">
-            Verification Failed
-          </h2>
-          <p className="text-gray-600">
-            The verification link is invalid or has expired. Please request a
-            new verification email.
-          </p>
-
-          <div className="pt-4">
-            <button
-              onClick={() => setStatus("resend")}
-              className="btn-primary w-full"
-            >
-              Resend Verification Email
-            </button>
-            <Link
-              to="/login"
-              className="block text-center text-blue-600 hover:underline mt-4"
-            >
-              Back to Login
-            </Link>
-          </div>
-        </div>
-      </AuthFormContainer>
-    );
-  }
-
-  if (status === "resend" || status === "resend_success") {
-    return (
-      <AuthFormContainer title="Resend Verification Email">
-        <div className="space-y-4">
-          {status === "resend_success" && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <p className="text-green-600 text-sm">
-                Verification email sent successfully! Please check your inbox.
-              </p>
-            </div>
-          )}
-
-          <p className="text-gray-600">
-            Enter your email address to receive a new verification link.
-          </p>
-
-          <form onSubmit={handleResendEmail} className="space-y-4">
-            <div>
-              <label
-                htmlFor="email"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                Email Address
-              </label>
-              <input
-                type="email"
-                id="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="input-field w-full"
-                placeholder="Enter your email"
-                required
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="btn-primary w-full"
-            >
-              {loading ? "Sending..." : "Resend Verification Email"}
-            </button>
-          </form>
-
-          <div className="text-center">
-            <Link to="/login" className="text-blue-600 hover:underline">
-              Back to Login
-            </Link>
-          </div>
-        </div>
+      <AuthFormContainer title="Verifying Email">
+        <EnhancedLoadingSpinner
+          type="dots"
+          text="Verifying your email address..."
+        />
       </AuthFormContainer>
     );
   }
 
   return (
-    <AuthFormContainer title="Verifying Email">
-      <LoadingSpinner text="Verifying your email address..." />
+    <AuthFormContainer
+      title={
+        status === "success"
+          ? "Email Verified!"
+          : status === "error"
+          ? "Verification Failed"
+          : "Check Your Email"
+      }
+    >
+      {status === "success" && <VerificationSuccess />}
+      {status === "error" && <ResendForm />}
+      {(status === "resend" || status === "resend_success") && <ResendForm />}
     </AuthFormContainer>
   );
 }

@@ -242,3 +242,118 @@
 .btn-secondary:hover {
   background-color: #d1d5db;
 }
+
+/* Added for responsive design */
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes bounceIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  70% {
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-5px);
+  }
+  75% {
+    transform: translateX(5px);
+  }
+}
+
+/* Success/Error state classes */
+.success-animation {
+  animation: slideInUp 0.5s ease-out, bounceIn 0.6s ease-out;
+}
+
+.error-animation {
+  animation: shake 0.5s ease-in-out;
+}
+
+.progress-bar {
+  animation: progressShrink 3s linear forwards;
+}
+
+@keyframes progressShrink {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
+}
+
+/* Enhanced mobile responsiveness */
+@media (max-width: 768px) {
+  .card {
+    @apply p-4;
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    @apply py-3 text-base; /* Larger touch targets */
+  }
+
+  .input-field {
+    @apply py-3; /* Better touch experience */
+  }
+
+  /* Modal improvements for mobile */
+  .modal-content {
+    @apply m-2 p-4 max-h-[95vh] max-w-[95vw];
+  }
+
+  /* Grid improvements */
+  .grid {
+    @apply gap-4;
+  }
+
+  /* Header improvements */
+  header {
+    @apply px-4 py-3;
+  }
+
+  /* Hide less important elements on mobile */
+  .mobile-hidden {
+    @apply hidden;
+  }
+}
+
+/* Enhanced touch interactions */
+@media (hover: none) and (pointer: coarse) {
+  .btn-primary:hover,
+  .btn-secondary:hover {
+    transform: scale(0.98); /* Subtle feedback on touch */
+  }
+
+  /* Increase tap target sizes */
+  .navigation-item {
+    @apply min-h-[44px] min-w-[44px]; /* Apple's recommended minimum */
+  }
+}

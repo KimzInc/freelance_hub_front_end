@@ -48,8 +48,13 @@ export default function FreelancerDashboard() {
         getFreelancerProjects(),
         getMyFreelancerProjects(),
       ]);
+
       setAvailableProjects(available);
-      setMyProjects(myProjects);
+      setMyProjects(
+        Array.isArray(myProjects) ? myProjects : myProjects.results || []
+      );
+
+      //setMyProjects(myProjects);
     } catch (error) {
       console.error("Error loading projects:", error);
 
@@ -167,7 +172,10 @@ export default function FreelancerDashboard() {
                     <p>Style: {project.style}</p>
                   </div>
                   <p className="font-semibold mb-3">
-                    Price: ${project.display_price || project.total_price}
+                    Price: $
+                    {project.display_price !== undefined
+                      ? parseFloat(project.display_price).toFixed(0)
+                      : parseFloat(project.total_price).toFixed(0)}
                   </p>
                   <button
                     className="btn-primary w-full"
@@ -189,9 +197,15 @@ export default function FreelancerDashboard() {
             </p>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {myProjects.map((project) => (
-                <FreelancerProjectCard key={project.id} project={project} />
-              ))}
+              {Array.isArray(myProjects) && myProjects.length > 0 ? (
+                myProjects.map((project) => (
+                  <FreelancerProjectCard key={project.id} project={project} />
+                ))
+              ) : (
+                <p className="text-gray-600">
+                  You haven't claimed any projects yet.
+                </p>
+              )}
             </div>
           )}
         </>
