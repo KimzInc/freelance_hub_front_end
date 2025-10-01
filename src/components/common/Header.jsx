@@ -245,7 +245,7 @@ export default function Header() {
                   <p className="text-sm text-gray-600">{user.email}</p>
                 </div>
 
-                {/* ✅ Role-based navigation */}
+                {/* Role-based navigation */}
                 {user.role === "ADMIN" && (
                   <Link
                     to="/admin/freelancer-approval"

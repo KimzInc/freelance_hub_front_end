@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { useParams } from "react-router-dom";
-import { getCustomRequest } from "../components/services/requests";
+import { Link, useParams } from "react-router-dom";
+import {
+  getCustomRequest,
+  getCustomRequestSummary,
+} from "../components/services/requests";
 import ChatBox from "../components/chat/ChatBox";
+import CustomRequestPurchaseModal from "../components/Projects/CustomRequestPurchaseModal";
 
 export default function CustomRequestDetailPage() {
   const { id } = useParams();
@@ -11,22 +14,23 @@ export default function CustomRequestDetailPage() {
   const [loading, setLoading] = useState(true);
   const [showFullFile, setShowFullFile] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState({});
+  const [showPayModal, setShowPayModal] = useState(false);
 
   useEffect(() => {
-    async function fetchRequest() {
+    async function fetchSummary() {
       try {
-        const data = await getCustomRequest(id);
+        const data = await getCustomRequestSummary(id);
         setRequest(data);
       } catch (err) {
-        console.error("Failed to fetch request:", err);
+        console.error("Failed to fetch summary:", err);
         setError(
-          err.response?.data?.error || "Could not fetch request details."
+          err.response?.data?.detail || "Could not fetch request summary."
         );
       } finally {
         setLoading(false);
       }
     }
-    fetchRequest();
+    fetchSummary();
   }, [id]);
 
   // Calculate time remaining until deadline
@@ -53,24 +57,18 @@ export default function CustomRequestDetailPage() {
       setTimeRemaining({ days, hours, minutes, seconds, expired: false });
     };
 
-    // Calculate immediately
     calculateTimeRemaining();
-
-    // Update every second if not expired
     if (!timeRemaining.expired) {
       const timer = setInterval(calculateTimeRemaining, 1000);
       return () => clearInterval(timer);
     }
   }, [request, timeRemaining.expired]);
 
-  // Check if project is urgent (less than 24 hours until deadline)
   const isUrgent = () => {
     if (!request || !request.deadline) return false;
-
     const deadline = new Date(request.deadline);
     const now = new Date();
     const hoursRemaining = (deadline - now) / (1000 * 60 * 60);
-
     return hoursRemaining <= 24 && hoursRemaining > 0;
   };
 
@@ -107,12 +105,8 @@ export default function CustomRequestDetailPage() {
     URGENT: "bg-red-100 text-red-800 border border-red-300",
   };
 
-  // Format the timer display
   const formatTimeRemaining = () => {
-    if (timeRemaining.expired) {
-      return "Deadline passed";
-    }
-
+    if (timeRemaining.expired) return "Deadline passed";
     if (!timeRemaining.days && !timeRemaining.hours && !timeRemaining.minutes) {
       return "Less than a minute remaining";
     }
@@ -131,7 +125,6 @@ export default function CustomRequestDetailPage() {
         <h1 className="text-2xl font-bold">{request.title}</h1>
 
         <div className="flex flex-col items-end gap-2">
-          {/* Status badge */}
           <span
             className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
               statusColors[request.status] || "bg-gray-100 text-gray-800"
@@ -140,7 +133,6 @@ export default function CustomRequestDetailPage() {
             {request.status}
           </span>
 
-          {/* URGENT badge - only show if project is urgent */}
           {isUrgent() && (
             <span
               className={`inline-block px-3 py-1 rounded-full text-sm font-bold ${urgentColors.URGENT}`}
@@ -151,7 +143,6 @@ export default function CustomRequestDetailPage() {
         </div>
       </div>
 
-      {/* Countdown Timer */}
       {request.paid_amount > 0 && request.deadline && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <h3 className="font-medium text-blue-800 mb-2">Time Remaining</h3>
@@ -201,12 +192,15 @@ export default function CustomRequestDetailPage() {
         </p>
       </div>
 
-      <div>
-        <h2 className="text-lg font-semibold mb-2">Description</h2>
-        <p className="text-gray-700 whitespace-pre-line">
-          {request.description}
-        </p>
-      </div>
+      {/* Only render description/attached content if backend includes them (paid/full access) */}
+      {request.description && (
+        <div>
+          <h2 className="text-lg font-semibold mb-2">Description</h2>
+          <p className="text-gray-700 whitespace-pre-line">
+            {request.description}
+          </p>
+        </div>
+      )}
 
       {request.attached_file_content && (
         <div>
@@ -225,7 +219,53 @@ export default function CustomRequestDetailPage() {
         </div>
       )}
 
-      <div className="pt-6">
+      <div className="pt-6 space-y-4">
+        {request.completed_file && (
+          <div>
+            <h2 className="text-lg font-semibold mb-2">Completed Project</h2>
+
+            {parseFloat(request.paid_amount) >=
+            parseFloat(request.total_price) ? (
+              <>
+                <a
+                  href={request.completed_file}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
+                  download
+                >
+                  ⬇️ Download Completed File
+                </a>
+                <p className="text-xs text-gray-500 mt-1">
+                  Click to download the freelancer’s final submission.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-red-600 mb-2">
+                  You must pay the remaining balance to download this file.
+                </p>
+                <button
+                  onClick={() => setShowPayModal(true)}
+                  className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+                >
+                  Pay Remaining Balance
+                </button>
+              </>
+            )}
+
+            {showPayModal && (
+              <CustomRequestPurchaseModal
+                request={request}
+                onClose={() => {
+                  setShowPayModal(false);
+                  getCustomRequest(id).then(setRequest);
+                }}
+              />
+            )}
+          </div>
+        )}
+
         <Link
           to="/my-requests"
           className="inline-block bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded"
@@ -233,6 +273,7 @@ export default function CustomRequestDetailPage() {
           ← Back to My Requests
         </Link>
       </div>
+
       <div className="mt-8">
         <ChatBox requestId={id} />
       </div>

@@ -31,7 +31,6 @@ export async function submitCustomRequest(form) {
   return res.data; // Should be the custom request details
 }
 
-// Fetch details of a submitted request
 export async function getCustomRequest(id) {
   const res = await api.get(`/request/${id}/`);
   return res.data;
@@ -81,4 +80,9 @@ export const sendMessage = async (requestId, content) => {
 export async function checkApproval() {
   const response = await api.get("/check-approval/");
   return response.data;
+}
+
+export async function getCustomRequestSummary(id) {
+  const res = await api.get(`/requests/${id}/summary/`);
+  return res.data;
 }
