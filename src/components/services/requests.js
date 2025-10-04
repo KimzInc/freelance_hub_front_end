@@ -1,34 +1,39 @@
 import api from "./api";
 
+function calculateHoursUntilDeadline(deadline) {
+  if (!deadline) return 96; // default fallback
+  const deadlineDate = new Date(deadline);
+  const now = new Date();
+  const diffMs = deadlineDate - now;
+  return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60)));
+}
+
 export async function submitCustomRequest(form) {
   const formData = new FormData();
 
-  formData.append("title", form.title);
-
-  if (form.deadline instanceof Date) {
-    formData.append("deadline", form.deadline.toISOString().split("T")[0]);
-  } else {
-    formData.append("deadline", form.deadline); // assume it's already "YYYY-MM-DD"
-  }
-
-  formData.append("number_of_pages", form.number_of_pages);
-  formData.append("sources", form.sources);
-  formData.append("style", form.style);
-  formData.append("description", form.description);
-
-  formData.append("total_price", parseFloat(form.total_price).toFixed(2));
-
-  formData.append("terms_accepted", form.terms_accepted ? "true" : "false");
-
-  if (form.attached_file_path) {
-    formData.append("attached_file_path", form.attached_file_path);
-  }
-
-  const res = await api.post("/purchase/new/", formData, {
-    headers: { "Content-Type": "multipart/form-data" },
+  Object.entries(form).forEach(([key, value]) => {
+    if (value !== null && value !== undefined) {
+      // Handle file uploads properly
+      if (key === "attached_file_path" && value instanceof File) {
+        formData.append(key, value);
+      } else {
+        formData.append(key, value);
+      }
+    }
   });
 
-  return res.data; // Should be the custom request details
+  const hours = calculateHoursUntilDeadline(form.deadline);
+  formData.set("deadline_hours", hours); // override if already present
+
+  try {
+    const response = await api.post("/purchase/new/", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error submitting custom request:", error);
+    throw error;
+  }
 }
 
 export async function getCustomRequest(id) {
@@ -86,3 +91,14 @@ export async function getCustomRequestSummary(id) {
   const res = await api.get(`/requests/${id}/summary/`);
   return res.data;
 }
+
+/// to be used by the PriceCalculator component
+
+export const getPriceQuote = async (projectType, pages, deadlineHours) => {
+  const response = await api.post("/price/quote/", {
+    project_type: projectType,
+    pages,
+    deadline_hours: deadlineHours,
+  });
+  return response.data;
+};

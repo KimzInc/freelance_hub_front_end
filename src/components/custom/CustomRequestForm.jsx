@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { submitCustomRequest } from "../services/requests";
+import { getPriceQuote, submitCustomRequest } from "../services/requests";
 import FormField from "../common/FormField";
 import LoadingSpinner from "../common/LoadingSpinner";
 import CustomRequestPurchaseModal from "../Projects/CustomRequestPurchaseModal";
@@ -9,7 +9,7 @@ import CustomRequestPurchaseModal from "../Projects/CustomRequestPurchaseModal";
 const initial = {
   title: "",
   deadline: "",
-  project_type: "non-tech", // Added project type
+  project_type: "non-tech",
   number_of_pages: 1,
   sources: 0,
   style: "APA",
@@ -28,68 +28,37 @@ export default function CustomRequestForm() {
   const navigate = useNavigate();
   const [createdRequest, setCreatedRequest] = useState(null);
 
-  // Calculate price based on project type, pages, timeframe, and style
-  const calculatePrice = useCallback(() => {
-    // Base price per page based on timeframe
-    let basePricePerPage;
-    const hoursUntilDeadline = calculateHoursUntilDeadline(form.deadline);
+  // Fetch live price from backend when fields change
+  useEffect(() => {
+    const fetchPrice = async () => {
+      if (!form.deadline || !form.number_of_pages) return;
+      try {
+        const hoursUntilDeadline = calculateHoursUntilDeadline(form.deadline);
+        const data = await getPriceQuote(
+          form.project_type,
+          form.number_of_pages,
+          hoursUntilDeadline
+        );
+        setForm((f) => ({
+          ...f,
+          total_price: parseFloat(data.total_price).toFixed(2),
+        }));
+      } catch (error) {
+        console.error("Error fetching price:", error);
+      }
+    };
 
-    if (hoursUntilDeadline <= 24) {
-      basePricePerPage = 17;
-    } else if (hoursUntilDeadline <= 48) {
-      basePricePerPage = 14;
-    } else if (hoursUntilDeadline <= 72) {
-      basePricePerPage = 11;
-    } else {
-      basePricePerPage = 9;
-    }
-
-    // Add $6 for technical projects
-    if (form.project_type === "tech") {
-      basePricePerPage += 5;
-    }
-
-    // Style premium
-    const stylePremium =
-      form.style === "Harvard" || form.style === "Chicago" ? 1 : 0;
-
-    // Calculate total price
-    const pages = form.number_of_pages || 1;
-    const sources = form.sources || 0;
-
-    return pages * basePricePerPage + sources * 0 + stylePremium;
-  }, [
-    form.project_type,
-    form.number_of_pages,
-    form.deadline,
-    form.style,
-    form.sources,
-  ]);
+    fetchPrice();
+  }, [form.project_type, form.number_of_pages, form.deadline]);
 
   // Calculate hours until deadline
   const calculateHoursUntilDeadline = (deadline) => {
-    if (!deadline) return 96; // Default to longest timeframe
-
+    if (!deadline) return 96;
     const deadlineDate = new Date(deadline);
     const now = new Date();
     const diffMs = deadlineDate - now;
     return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60)));
   };
-
-  // Update price whenever relevant fields change
-  useEffect(() => {
-    if (form.deadline && form.number_of_pages > 0) {
-      const calculatedPrice = calculatePrice();
-      setForm((f) => ({ ...f, total_price: calculatedPrice.toFixed(2) }));
-    }
-  }, [
-    form.project_type,
-    form.number_of_pages,
-    form.deadline,
-    form.style,
-    form.sources,
-    calculatePrice,
-  ]);
 
   const onChange = (e) => {
     const { name, value, type, checked, files } = e.target;
@@ -99,7 +68,6 @@ export default function CustomRequestForm() {
       const file = files?.[0];
       setForm((f) => ({ ...f, [name]: file }));
 
-      // Create preview for image files
       if (file && file.type.startsWith("image/")) {
         const reader = new FileReader();
         reader.onload = (e) => setFilePreview(e.target.result);
@@ -111,7 +79,6 @@ export default function CustomRequestForm() {
       setForm((f) => ({ ...f, [name]: value }));
     }
 
-    // Clear error when field is edited
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
     }
@@ -122,7 +89,6 @@ export default function CustomRequestForm() {
     if (!form.title.trim()) errs.title = "Title is required";
     if (!form.deadline) errs.deadline = "Deadline is required";
 
-    // Validate deadline is not in the past
     if (form.deadline) {
       const selectedDate = new Date(form.deadline);
       const today = new Date();
@@ -149,7 +115,13 @@ export default function CustomRequestForm() {
       setLoading(true);
       setApiError("");
 
-      const data = await submitCustomRequest(form);
+      const hoursUntilDeadline = calculateHoursUntilDeadline(form.deadline);
+      const payload = {
+        ...form,
+        deadline_hours: hoursUntilDeadline,
+      };
+
+      const data = await submitCustomRequest(payload);
 
       toast.success("Request submitted successfully!");
       setCreatedRequest(data);
@@ -173,13 +145,20 @@ export default function CustomRequestForm() {
     setFilePreview(null);
   };
 
-  // Get timeframe description for display
+  // Synced with backend pricing rules
   const getTimeframeDescription = () => {
     const hours = calculateHoursUntilDeadline(form.deadline);
 
-    if (hours <= 24) return "24 hours (Urgent) - $17/page";
-    if (hours <= 48) return "48 hours - $14/page";
-    if (hours <= 72) return "72 hours - $11/page";
+    if (hours <= 12) {
+      return form.project_type === "tech"
+        ? "12 hours (Urgent Tech) - $14/page"
+        : "12 hours (Urgent Non-Tech) - $12/page";
+    }
+    if (hours <= 72) {
+      return form.project_type === "tech"
+        ? "Up to 72 hours - $11/page"
+        : "Up to 72 hours - $9/page";
+    }
     return "96+ hours - $9/page";
   };
 
@@ -231,7 +210,6 @@ export default function CustomRequestForm() {
               <p className="text-sm text-gray-600 mt-1">
                 Coding, Excel, Data Analysis
               </p>
-              {/* <p className="text-xs text-blue-600 mt-1">+$6 per page</p> */}
             </div>
           </div>
         </FormField>
@@ -264,8 +242,8 @@ export default function CustomRequestForm() {
             >
               <option value="APA">APA (No additional charge)</option>
               <option value="MLA">MLA (No additional charge)</option>
-              <option value="Chicago">Chicago (+$1 premium)</option>
-              <option value="Harvard">Harvard (+$1 premium)</option>
+              <option value="Chicago">Chicago (No additional charge)</option>
+              <option value="Harvard">Harvard (No additional charge)</option>
             </select>
           </FormField>
         </div>

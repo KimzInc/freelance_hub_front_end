@@ -1,70 +1,26 @@
 import { useState, useEffect } from "react";
+import { getPriceQuote } from "../components/services/requests";
 
 export default function PriceCalculator() {
   const [projectType, setProjectType] = useState("non-tech");
   const [pages, setPages] = useState(1);
-  const [timeframe, setTimeframe] = useState(24);
+  const [timeframe, setTimeframe] = useState(24); // default to normal (>12h)
   const [price, setPrice] = useState(0);
-  const [pricePerPage, setPricePerPage] = useState(17);
+  const [pricePerPage, setPricePerPage] = useState(0);
 
-  // Calculate price whenever inputs change
   useEffect(() => {
-    let basePricePerPage;
+    const fetchPrice = async () => {
+      try {
+        const data = await getPriceQuote(projectType, pages, timeframe);
+        setPricePerPage(parseFloat(data.price_per_page));
+        setPrice(parseFloat(data.total_price));
+      } catch (error) {
+        console.error("Error fetching price:", error);
+      }
+    };
 
-    // Determine base price based on timeframe
-    switch (parseInt(timeframe)) {
-      case 24:
-        basePricePerPage = 17;
-        break;
-      case 48:
-        basePricePerPage = 14;
-        break;
-      case 72:
-        basePricePerPage = 11;
-        break;
-      case 96:
-      default:
-        basePricePerPage = 9;
-        break;
-    }
-
-    // Add $5 for technical projects
-    if (projectType === "tech") {
-      basePricePerPage += 5;
-    }
-
-    setPricePerPage(basePricePerPage);
-    setPrice(pages * basePricePerPage);
+    fetchPrice();
   }, [projectType, pages, timeframe]);
-
-  const calculatePrice = () => {
-    let basePricePerPage;
-
-    // Determine base price based on timeframe
-    switch (parseInt(timeframe)) {
-      case 24:
-        basePricePerPage = 20;
-        break;
-      case 48:
-        basePricePerPage = 17;
-        break;
-      case 72:
-        basePricePerPage = 14;
-        break;
-      case 96:
-      default:
-        basePricePerPage = 11;
-        break;
-    }
-
-    // Add $6 for technical projects
-    if (projectType === "tech") {
-      basePricePerPage += 5;
-    }
-
-    setPricePerPage(basePricePerPage);
-    setPrice(pages * basePricePerPage);
-  };
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
@@ -75,6 +31,7 @@ export default function PriceCalculator() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Calculator Form */}
         <div className="space-y-6">
+          {/* Project Type */}
           <div>
             <h3 className="text-lg font-semibold mb-4">Project Type</h3>
             <div className="grid grid-cols-2 gap-4">
@@ -105,11 +62,11 @@ export default function PriceCalculator() {
                 <p className="text-sm text-gray-600 mt-1">
                   Coding, Excel, Data Analysis
                 </p>
-                {/* <p className="text-xs text-blue-600 mt-1">+$5 per page</p> */}
               </div>
             </div>
           </div>
 
+          {/* Pages & Timeframe */}
           <div className="space-y-4">
             <div>
               <label
@@ -141,19 +98,10 @@ export default function PriceCalculator() {
                 onChange={(e) => setTimeframe(parseInt(e.target.value))}
                 className="input-field"
               >
-                <option value="24">24 hours (Urgent) - $17/page</option>
-                <option value="48">48 hours - $14/page</option>
-                <option value="72">72 hours - $11/page</option>
-                <option value="96">96+ hours - $9/page</option>
+                <option value="12">Urgent (≤ 12 hours)</option>
+                <option value="24">Normal (12 hours + )</option>
               </select>
             </div>
-
-            <button
-              onClick={calculatePrice}
-              className="w-full btn-primary py-3"
-            >
-              Calculate Price
-            </button>
           </div>
         </div>
 
@@ -201,7 +149,7 @@ export default function PriceCalculator() {
         </div>
       </div>
 
-      {/* Project Type Examples */}
+      {/* Project Examples */}
       <div className="mt-8 pt-6 border-t border-gray-200">
         <h3 className="text-lg font-semibold mb-4">Project Examples</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -210,19 +158,14 @@ export default function PriceCalculator() {
               Non-Technical Projects
             </h4>
             <ul className="text-sm text-gray-600 list-disc pl-5 space-y-1">
-              <li>Annotated Bibliography</li>
-              <li>Application Essay</li>
-              <li>Article</li>
-              <li>Capstone Project</li>
-              <li>Case Study</li>
-              <li>Content Writing</li>
-              <li>Coursework</li>
-              <li>Creative Writing</li>
-              <li>Dissertation</li>
               <li>Essay</li>
               <li>Research Paper</li>
+              <li>Dissertation</li>
               <li>Term paper</li>
               <li>Thesis</li>
+              <li>Capstone Project</li>
+              <li>Creative Writing</li>
+              <li>Content Writing</li>
             </ul>
           </div>
           <div>
@@ -230,15 +173,13 @@ export default function PriceCalculator() {
               Technical Projects
             </h4>
             <ul className="text-sm text-gray-600 list-disc pl-5 space-y-1">
-              <li>Code/Programming</li>
+              <li>Programming / Code</li>
               <li>Excel Assignment</li>
-              <li>Data analysis</li>
-              <li>Finance/Accounting</li>
+              <li>Data Analysis</li>
+              <li>Finance & Accounting</li>
               <li>Math Solving</li>
-              <li>Algorithm Development</li>
               <li>Database Design</li>
               <li>Statistical Analysis</li>
-              <li>Financial Modeling</li>
               <li>Simulation Projects</li>
             </ul>
           </div>

@@ -220,7 +220,7 @@ export default function CustomRequestDetailPage() {
       )}
 
       <div className="pt-6 space-y-4">
-        {request.completed_file && (
+        {request.completed_file_url && (
           <div>
             <h2 className="text-lg font-semibold mb-2">Completed Project</h2>
 
@@ -228,7 +228,7 @@ export default function CustomRequestDetailPage() {
             parseFloat(request.total_price) ? (
               <>
                 <a
-                  href={request.completed_file}
+                  href={request.completed_file_url}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-block bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
