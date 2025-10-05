@@ -83,40 +83,40 @@ export default function Footer() {
           </h3>
           <ul className="space-y-3">
             <li>
-              <a
-                href="#"
-                className="text-sm hover:text-white transition-colors duration-200 flex items-center group"
+              <button
+                className="text-sm hover:text-white transition-colors duration-200 flex items-center group bg-transparent border-none p-0 cursor-pointer"
+                onClick={() => alert("Help Center - Coming Soon!")}
               >
                 <span className="w-1 h-1 bg-gray-400 rounded-full mr-2 group-hover:bg-yellow-400 transition-colors"></span>
                 Help Center
-              </a>
+              </button>
             </li>
             <li>
-              <a
-                href="#"
-                className="text-sm hover:text-white transition-colors duration-200 flex items-center group"
+              <button
+                className="text-sm hover:text-white transition-colors duration-200 flex items-center group bg-transparent border-none p-0 cursor-pointer"
+                onClick={() => alert("Blog - Coming Soon!")}
               >
                 <span className="w-1 h-1 bg-gray-400 rounded-full mr-2 group-hover:bg-yellow-400 transition-colors"></span>
                 Blog
-              </a>
+              </button>
             </li>
             <li>
-              <a
-                href="#"
-                className="text-sm hover:text-white transition-colors duration-200 flex items-center group"
+              <button
+                className="text-sm hover:text-white transition-colors duration-200 flex items-center group bg-transparent border-none p-0 cursor-pointer"
+                onClick={() => alert("Community - Coming Soon!")}
               >
                 <span className="w-1 h-1 bg-gray-400 rounded-full mr-2 group-hover:bg-yellow-400 transition-colors"></span>
                 Community
-              </a>
+              </button>
             </li>
             <li>
-              <a
-                href="#"
-                className="text-sm hover:text-white transition-colors duration-200 flex items-center group"
+              <button
+                className="text-sm hover:text-white transition-colors duration-200 flex items-center group bg-transparent border-none p-0 cursor-pointer"
+                onClick={() => alert("Success Stories - Coming Soon!")}
               >
                 <span className="w-1 h-1 bg-gray-400 rounded-full mr-2 group-hover:bg-yellow-400 transition-colors"></span>
                 Success Stories
-              </a>
+              </button>
             </li>
           </ul>
         </div>
@@ -234,24 +234,24 @@ export default function Footer() {
             © {currentYear} Freelance Hub. All rights reserved.
           </p>
           <div className="flex space-x-6 text-sm">
-            <a
-              href="#"
-              className="text-gray-400 hover:text-white transition-colors duration-200"
+            <button
+              className="text-gray-400 hover:text-white transition-colors duration-200 bg-transparent border-none p-0 cursor-pointer"
+              onClick={() => alert("Privacy Policy - Coming Soon!")}
             >
               Privacy Policy
-            </a>
-            <a
-              href="#"
-              className="text-gray-400 hover:text-white transition-colors duration-200"
+            </button>
+            <button
+              className="text-gray-400 hover:text-white transition-colors duration-200 bg-transparent border-none p-0 cursor-pointer"
+              onClick={() => alert("Terms of Service - Coming Soon!")}
             >
               Terms of Service
-            </a>
-            <a
-              href="#"
-              className="text-gray-400 hover:text-white transition-colors duration-200"
+            </button>
+            <button
+              className="text-gray-400 hover:text-white transition-colors duration-200 bg-transparent border-none p-0 cursor-pointer"
+              onClick={() => alert("Cookie Policy - Coming Soon!")}
             >
               Cookie Policy
-            </a>
+            </button>
           </div>
         </div>
       </div>
