@@ -92,8 +92,6 @@ export async function getCustomRequestSummary(id) {
   return res.data;
 }
 
-/// to be used by the PriceCalculator component
-
 export const getPriceQuote = async (projectType, pages, deadlineHours) => {
   const response = await api.post("/price/quote/", {
     project_type: projectType,
@@ -102,3 +100,56 @@ export const getPriceQuote = async (projectType, pages, deadlineHours) => {
   });
   return response.data;
 };
+
+// In requests.js - update the functions to handle paginated responses
+export async function getDisciplines() {
+  try {
+    const res = await api.get("/disciplines/");
+    console.log("Raw disciplines response:", res.data);
+
+    // Handle paginated response (common in DRF)
+    if (res.data && Array.isArray(res.data.results)) {
+      return res.data.results;
+    }
+    // Handle non-paginated array response
+    else if (Array.isArray(res.data)) {
+      return res.data;
+    }
+    // Fallback - try to extract data from common structures
+    else if (res.data && Array.isArray(res.data.data)) {
+      return res.data.data;
+    } else {
+      console.warn("Unexpected disciplines response structure:", res.data);
+      return [];
+    }
+  } catch (error) {
+    console.error("Error fetching disciplines:", error);
+    throw error;
+  }
+}
+
+export async function getAssignmentTypes() {
+  try {
+    const res = await api.get("/assignment-types/");
+    console.log("Raw assignment types response:", res.data);
+
+    // Handle paginated response (common in DRF)
+    if (res.data && Array.isArray(res.data.results)) {
+      return res.data.results;
+    }
+    // Handle non-paginated array response
+    else if (Array.isArray(res.data)) {
+      return res.data;
+    }
+    // Fallback - try to extract data from common structures
+    else if (res.data && Array.isArray(res.data.data)) {
+      return res.data.data;
+    } else {
+      console.warn("Unexpected assignment types response structure:", res.data);
+      return [];
+    }
+  } catch (error) {
+    console.error("Error fetching assignment types:", error);
+    throw error;
+  }
+}

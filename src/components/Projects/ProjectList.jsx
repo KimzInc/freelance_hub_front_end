@@ -20,15 +20,55 @@ function ProjectList({ projects, loading = false }) {
     );
   }
 
-  // Additional safety check for projects
-  if (!projects || !Array.isArray(projects)) {
-    throw new Error("Projects data is not in expected format");
+  // Better safety check for projects data
+  if (!projects) {
+    console.warn("Projects data is undefined or null");
+    return (
+      <div className="text-center py-8">
+        <div className="text-6xl mb-4">⚠️</div>
+        <h3 className="text-xl font-semibold text-gray-800 mb-2">
+          No projects data available
+        </h3>
+        <p className="text-gray-600">
+          Please try refreshing the page or contact support.
+        </p>
+      </div>
+    );
+  }
+
+  // Check if projects is an array, if not try to extract results
+  let projectsArray = [];
+  if (Array.isArray(projects)) {
+    projectsArray = projects;
+  } else if (projects && Array.isArray(projects.results)) {
+    projectsArray = projects.results;
+  } else if (projects && Array.isArray(projects.data)) {
+    projectsArray = projects.data;
+  } else {
+    console.warn("Projects data is not in expected format:", projects);
+    return (
+      <div className="text-center py-8">
+        <div className="text-6xl mb-4">📝❌</div>
+        <h3 className="text-xl font-semibold text-gray-800 mb-2">
+          Unable to display projects
+        </h3>
+        <p className="text-gray-600 mb-4">
+          The projects data format is unexpected.
+        </p>
+        <button
+          onClick={() => window.location.reload()}
+          className="btn-primary"
+        >
+          Refresh Page
+        </button>
+      </div>
+    );
   }
 
   try {
     return (
       <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {projects.map((p) => {
+        {projectsArray.map((p) => {
           // Validate each project object
           if (!p || !p.id) {
             console.warn("Invalid project object encountered:", p);

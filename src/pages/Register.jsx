@@ -5,6 +5,7 @@ import { registerUser } from "../components/services/auth";
 import AuthFormContainer from "../components/common/AuthFormContainer";
 import FormField from "../components/common/FormField";
 import LoadingSpinner from "../components/common/LoadingSpinner";
+import { EyeIcon, EyeOffIcon } from "lucide-react"; // 👁️ for show/hide toggle
 
 export default function Register() {
   const navigate = useNavigate();
@@ -14,9 +15,12 @@ export default function Register() {
     username: "",
     email: "",
     password: "",
+    confirmPassword: "",
   });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const onChange = (e) => {
     const { name, value } = e.target;
@@ -42,6 +46,11 @@ export default function Register() {
     else if (form.password.length < 8)
       newErrors.password = "Password must be at least 8 characters";
 
+    if (!form.confirmPassword)
+      newErrors.confirmPassword = "Please confirm your password";
+    else if (form.password !== form.confirmPassword)
+      newErrors.confirmPassword = "Passwords do not match";
+
     if (!role) newErrors.role = "Please choose your role";
 
     setErrors(newErrors);
@@ -57,7 +66,9 @@ export default function Register() {
       setErrors({});
 
       await registerUser({
-        ...form,
+        username: form.username,
+        email: form.email,
+        password: form.password,
         role,
       });
 
@@ -65,23 +76,32 @@ export default function Register() {
         `Registration successful! Please check your email (${form.email}) for verification instructions.`
       );
 
-      // Redirect to a page that explains what to do next
       navigate("/verify-email-pending", {
         state: { email: form.email, role: role },
       });
     } catch (err) {
       console.error("Registration error:", err);
-      const errorMessage =
-        err.response?.data?.error || "Registration failed. Try again.";
+
+      // 🔹 Improved error handling
+      let errorMessage = "Registration failed. Try again.";
+      if (err.response?.data) {
+        const data = err.response.data;
+        if (data.username && Array.isArray(data.username))
+          errorMessage = data.username[0];
+        else if (data.email && Array.isArray(data.email))
+          errorMessage = data.email[0];
+        else if (data.error) errorMessage = data.error;
+      }
+
       setErrors({ submit: errorMessage });
-      toast.error("Registration failed");
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
   if (!role) {
-    // Initial role selection screen
+    // Role selection screen
     return (
       <AuthFormContainer title="Join as a Client or Freelancer">
         <div className="space-y-6">
@@ -147,14 +167,55 @@ export default function Register() {
         </FormField>
 
         <FormField label="Password" error={errors.password} required>
-          <input
-            name="password"
-            type="password"
-            value={form.password}
-            onChange={onChange}
-            className={`input-field ${errors.password ? "input-error" : ""}`}
-            placeholder="Enter password"
-          />
+          <div className="relative">
+            <input
+              name="password"
+              type={showPassword ? "text" : "password"}
+              value={form.password}
+              onChange={onChange}
+              className={`input-field pr-10 ${
+                errors.password ? "input-error" : ""
+              }`}
+              placeholder="Enter password"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute inset-y-0 right-3 flex items-center text-gray-500"
+            >
+              {showPassword ? <EyeOffIcon size={18} /> : <EyeIcon size={18} />}
+            </button>
+          </div>
+        </FormField>
+
+        <FormField
+          label="Confirm Password"
+          error={errors.confirmPassword}
+          required
+        >
+          <div className="relative">
+            <input
+              name="confirmPassword"
+              type={showConfirmPassword ? "text" : "password"}
+              value={form.confirmPassword}
+              onChange={onChange}
+              className={`input-field pr-10 ${
+                errors.confirmPassword ? "input-error" : ""
+              }`}
+              placeholder="Re-enter password"
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              className="absolute inset-y-0 right-3 flex items-center text-gray-500"
+            >
+              {showConfirmPassword ? (
+                <EyeOffIcon size={18} />
+              ) : (
+                <EyeIcon size={18} />
+              )}
+            </button>
+          </div>
         </FormField>
 
         <div className="bg-gray-50 p-3 rounded-md text-sm text-gray-600">

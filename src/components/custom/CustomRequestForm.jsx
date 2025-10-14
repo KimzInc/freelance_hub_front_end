@@ -1,7 +1,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { getPriceQuote, submitCustomRequest } from "../services/requests";
+import {
+  getPriceQuote,
+  submitCustomRequest,
+  getDisciplines,
+  getAssignmentTypes,
+} from "../services/requests";
 import FormField from "../common/FormField";
 import LoadingSpinner from "../common/LoadingSpinner";
 import CustomRequestPurchaseModal from "../Projects/CustomRequestPurchaseModal";
@@ -17,6 +22,8 @@ const initial = {
   total_price: "",
   attached_file_path: null,
   terms_accepted: false,
+  discipline: "",
+  assignment_type: "",
 };
 
 export default function CustomRequestForm() {
@@ -27,6 +34,38 @@ export default function CustomRequestForm() {
   const [filePreview, setFilePreview] = useState(null);
   const navigate = useNavigate();
   const [createdRequest, setCreatedRequest] = useState(null);
+  const [disciplines, setDisciplines] = useState([]);
+  const [assignmentTypes, setAssignmentTypes] = useState([]);
+  const [loadingOptions, setLoadingOptions] = useState(true);
+
+  // Fetch disciplines and assignment types on component mount
+  useEffect(() => {
+    const fetchOptions = async () => {
+      try {
+        const [disciplineData, assignmentTypeData] = await Promise.all([
+          getDisciplines(),
+          getAssignmentTypes(),
+        ]);
+
+        // The API functions now handle the response structure
+        setDisciplines(disciplineData || []);
+        setAssignmentTypes(assignmentTypeData || []);
+
+        console.log("Loaded disciplines:", disciplineData);
+        console.log("Loaded assignment types:", assignmentTypeData);
+      } catch (error) {
+        console.error("Error fetching options:", error);
+        toast.error("Failed to load form options");
+        // Set empty arrays to prevent map errors
+        setDisciplines([]);
+        setAssignmentTypes([]);
+      } finally {
+        setLoadingOptions(false);
+      }
+    };
+
+    fetchOptions();
+  }, []);
 
   // Fetch live price from backend when fields change
   useEffect(() => {
@@ -50,6 +89,8 @@ export default function CustomRequestForm() {
 
     fetchPrice();
   }, [form.project_type, form.number_of_pages, form.deadline]);
+
+  // Rest of your existing code (calculateHoursUntilDeadline, onChange, validate, onSubmit, onReset, getTimeframeDescription)
 
   // Calculate hours until deadline
   const calculateHoursUntilDeadline = (deadline) => {
@@ -88,6 +129,9 @@ export default function CustomRequestForm() {
     const errs = {};
     if (!form.title.trim()) errs.title = "Title is required";
     if (!form.deadline) errs.deadline = "Deadline is required";
+    if (!form.discipline) errs.discipline = "Discipline is required";
+    if (!form.assignment_type)
+      errs.assignment_type = "Assignment type is required";
 
     if (form.deadline) {
       const selectedDate = new Date(form.deadline);
@@ -119,6 +163,8 @@ export default function CustomRequestForm() {
       const payload = {
         ...form,
         deadline_hours: hoursUntilDeadline,
+        discipline: parseInt(form.discipline), // Convert to integer for primary key
+        assignment_type: parseInt(form.assignment_type), // Convert to integer for primary key
       };
 
       const data = await submitCustomRequest(payload);
@@ -162,6 +208,10 @@ export default function CustomRequestForm() {
     return "96+ hours - $9/page";
   };
 
+  if (loadingOptions) {
+    return <LoadingSpinner text="Loading form options..." />;
+  }
+
   if (loading) {
     return <LoadingSpinner text="Submitting your request..." />;
   }
@@ -169,6 +219,7 @@ export default function CustomRequestForm() {
   return (
     <>
       <form onSubmit={onSubmit} className="space-y-6">
+        {/* Your existing form fields for title, project type, etc. */}
         <FormField label="Title" error={errors.title} required>
           <input
             name="title"
@@ -214,6 +265,68 @@ export default function CustomRequestForm() {
           </div>
         </FormField>
 
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Discipline Dropdown */}
+          <FormField label="Discipline" error={errors.discipline} required>
+            <select
+              name="discipline"
+              value={form.discipline}
+              onChange={onChange}
+              className={`input-field ${
+                errors.discipline ? "input-error" : ""
+              }`}
+              disabled={loading || loadingOptions}
+            >
+              <option value="">Select a discipline</option>
+              {Array.isArray(disciplines) &&
+                disciplines.map((discipline) => (
+                  <option key={discipline.id} value={discipline.id}>
+                    {discipline.name}
+                  </option>
+                ))}
+            </select>
+            {!loadingOptions &&
+              (!Array.isArray(disciplines) || disciplines.length === 0) && (
+                <p className="text-xs text-red-500 mt-1">
+                  No disciplines available. Please try refreshing the page.
+                </p>
+              )}
+          </FormField>
+
+          {/* Assignment Type Dropdown */}
+          <FormField
+            label="Assignment Type"
+            error={errors.assignment_type}
+            required
+          >
+            <select
+              name="assignment_type"
+              value={form.assignment_type}
+              onChange={onChange}
+              className={`input-field ${
+                errors.assignment_type ? "input-error" : ""
+              }`}
+              disabled={loading || loadingOptions}
+            >
+              <option value="">Select an assignment type</option>
+              {Array.isArray(assignmentTypes) &&
+                assignmentTypes.map((type) => (
+                  <option key={type.id} value={type.id}>
+                    {type.name}
+                  </option>
+                ))}
+            </select>
+            {!loadingOptions &&
+              (!Array.isArray(assignmentTypes) ||
+                assignmentTypes.length === 0) && (
+                <p className="text-xs text-red-500 mt-1">
+                  No assignment types available. Please try refreshing the page.
+                </p>
+              )}
+          </FormField>
+        </div>
+
+        {/* Rest of your existing form fields (deadline, style, pages, sources, price, description, file upload, terms) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField label="Deadline" error={errors.deadline} required>
             <input

@@ -7,7 +7,11 @@ import {
   getMyFreelancerProjects,
 } from "../components/services/projects";
 import { toast } from "react-toastify";
-import { checkApproval } from "../components/services/requests";
+import {
+  checkApproval,
+  getDisciplines,
+  getAssignmentTypes,
+} from "../components/services/requests";
 
 export default function FreelancerDashboard() {
   const { user, updateUser } = useContext(AuthContext);
@@ -15,11 +19,13 @@ export default function FreelancerDashboard() {
   const [myProjects, setMyProjects] = useState([]);
   const [activeTab, setActiveTab] = useState("available");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [disciplines, setDisciplines] = useState([]);
+  const [assignmentTypes, setAssignmentTypes] = useState([]);
 
-  // Only check approval status if needed
+  // Check approval status
   const checkApprovalIfNeeded = useCallback(async () => {
-    // If we don't have approval status or user is not approved, check with server
-    if (user.is_approved === undefined || !user.is_approved) {
+    if (user?.is_approved === undefined || !user?.is_approved) {
       try {
         const approvalStatus = await checkApproval();
         updateUser(approvalStatus);
@@ -32,11 +38,27 @@ export default function FreelancerDashboard() {
     return user.is_approved;
   }, [user, updateUser]);
 
+  // Load disciplines and assignment types
+  const loadOptions = useCallback(async () => {
+    try {
+      const [disciplineData, assignmentTypeData] = await Promise.all([
+        getDisciplines(),
+        getAssignmentTypes(),
+      ]);
+      setDisciplines(disciplineData || []);
+      setAssignmentTypes(assignmentTypeData || []);
+    } catch (error) {
+      console.error("Error loading options:", error);
+      // Continue even if options fail to load
+    }
+  }, []);
+
   const loadProjects = useCallback(async () => {
     try {
       setLoading(true);
+      setError("");
 
-      // Check if user is approved before loading projects
+      // Check if user is approved
       const isApproved = await checkApprovalIfNeeded();
 
       if (!isApproved) {
@@ -44,30 +66,33 @@ export default function FreelancerDashboard() {
         return;
       }
 
-      const [available, myProjects] = await Promise.all([
+      // Load options and projects in parallel
+      await loadOptions();
+
+      // Load both available and assigned projects
+      const [availableData, myProjectsData] = await Promise.all([
         getFreelancerProjects(),
         getMyFreelancerProjects(),
       ]);
 
-      setAvailableProjects(available);
-      setMyProjects(
-        Array.isArray(myProjects) ? myProjects : myProjects.results || []
-      );
+      console.log("Available projects data:", availableData);
+      console.log("My projects data:", myProjectsData);
 
-      //setMyProjects(myProjects);
+      setAvailableProjects(availableData || []);
+      setMyProjects(myProjectsData || []);
     } catch (error) {
       console.error("Error loading projects:", error);
+      setError("Failed to load projects");
 
-      // Check if it's an authentication error
       if (error.response?.status === 401) {
         toast.error("Session expired. Please log in again.");
       } else {
-        toast.error("Failed to load projects");
+        toast.error("Failed to load projects. Please try again.");
       }
     } finally {
       setLoading(false);
     }
-  }, [checkApprovalIfNeeded]);
+  }, [checkApprovalIfNeeded, loadOptions]);
 
   useEffect(() => {
     if (user?.role === "FREELANCER") {
@@ -81,17 +106,26 @@ export default function FreelancerDashboard() {
     try {
       await claimProject(projectId);
       toast.success("Project claimed successfully!");
-      loadProjects(); // Reload projects after claiming
+      // Reload both lists to reflect changes
+      loadProjects();
     } catch (error) {
       console.error("Error claiming project:", error);
       const errorMessage =
-        error.response?.data?.error || "Failed to claim project";
+        error.response?.data?.error ||
+        error.response?.data?.message ||
+        "Failed to claim project";
       toast.error(errorMessage);
     }
   };
 
-  // This check should be redundant now due to ProtectedRoute,
-  // but it's a good safety measure
+  // Helper function to get name from ID
+  const getNameFromId = (id, options) => {
+    if (!id || !Array.isArray(options)) return "Not specified";
+    const option = options.find((opt) => opt.id === id);
+    return option ? option.name : "Unknown";
+  };
+
+  // Access denied for non-freelancers
   if (user?.role !== "FREELANCER") {
     return (
       <div className="p-6 text-center">
@@ -101,6 +135,7 @@ export default function FreelancerDashboard() {
     );
   }
 
+  // Pending approval message
   if (!user?.is_approved) {
     return (
       <div className="p-6 text-center">
@@ -116,6 +151,16 @@ export default function FreelancerDashboard() {
   return (
     <div className="p-6 max-w-6xl mx-auto">
       <h2 className="text-2xl font-bold mb-6">Freelancer Dashboard</h2>
+
+      {/* Error Display */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+          <p className="text-red-600">{error}</p>
+          <button onClick={loadProjects} className="btn-primary mt-2">
+            Retry
+          </button>
+        </div>
+      )}
 
       {/* Tab Navigation */}
       <div className="flex border-b mb-6">
@@ -148,7 +193,7 @@ export default function FreelancerDashboard() {
       ) : activeTab === "available" ? (
         <>
           <h3 className="text-xl font-semibold mb-4">Available Projects</h3>
-          {availableProjects.length === 0 ? (
+          {!availableProjects || availableProjects.length === 0 ? (
             <p className="text-gray-600">
               No available projects at the moment.
             </p>
@@ -166,16 +211,28 @@ export default function FreelancerDashboard() {
                   <div className="text-sm text-gray-500 mb-3">
                     <p>
                       Deadline:{" "}
-                      {new Date(project.deadline).toLocaleDateString()}
+                      {project.deadline
+                        ? new Date(project.deadline).toLocaleDateString()
+                        : "Not specified"}
                     </p>
                     <p>Pages: {project.number_of_pages}</p>
                     <p>Style: {project.style}</p>
+                    <p>
+                      Discipline:{" "}
+                      {getNameFromId(project.discipline, disciplines)}
+                    </p>
+                    <p>
+                      Assignment Type:{" "}
+                      {getNameFromId(project.assignment_type, assignmentTypes)}
+                    </p>
                   </div>
                   <p className="font-semibold mb-3">
                     Price: $
                     {project.display_price !== undefined
                       ? parseFloat(project.display_price).toFixed(0)
-                      : parseFloat(project.total_price).toFixed(0)}
+                      : project.total_price
+                      ? parseFloat(project.total_price).toFixed(0)
+                      : "0"}
                   </p>
                   <button
                     className="btn-primary w-full"
@@ -191,21 +248,21 @@ export default function FreelancerDashboard() {
       ) : (
         <>
           <h3 className="text-xl font-semibold mb-4">My Projects</h3>
-          {myProjects.length === 0 ? (
+          {!myProjects || myProjects.length === 0 ? (
             <p className="text-gray-600">
               You haven't claimed any projects yet.
             </p>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {Array.isArray(myProjects) && myProjects.length > 0 ? (
-                myProjects.map((project) => (
-                  <FreelancerProjectCard key={project.id} project={project} />
-                ))
-              ) : (
-                <p className="text-gray-600">
-                  You haven't claimed any projects yet.
-                </p>
-              )}
+              {myProjects.map((project) => (
+                <FreelancerProjectCard
+                  key={project.id}
+                  project={project}
+                  onProjectUpdate={loadProjects}
+                  disciplines={disciplines}
+                  assignmentTypes={assignmentTypes}
+                />
+              ))}
             </div>
           )}
         </>
