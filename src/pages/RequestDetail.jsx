@@ -13,26 +13,45 @@ export default function RequestDetailPage() {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  async function load() {
-    setLoading(true);
-    try {
-      const data = await getRequestById(id);
-      setReq(data);
-    } finally {
-      setLoading(false);
-    }
-  }
-
+  // load request data — inline in effect to avoid missing-deps ESLint warning
   useEffect(() => {
-    load();
+    let mounted = true;
+
+    (async () => {
+      setLoading(true);
+      try {
+        const data = await getRequestById(id);
+        if (!mounted) return;
+        setReq(data);
+      } catch (err) {
+        console.error("Failed to load request:", err);
+        if (mounted) setReq(null);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
   }, [id]);
 
   const submitEdit = async (payload) => {
     setSaving(true);
     try {
       await clientEditRequest(id, payload);
-      await load();
+      // re-load the request after saving to pick up new total_price/paid_amount
+      setLoading(true);
+      try {
+        const data = await getRequestById(id);
+        setReq(data);
+      } finally {
+        setLoading(false);
+      }
       setEditing(false);
+    } catch (err) {
+      console.error("Failed to save edits:", err);
+      throw err; // let parent handle error UI if needed
     } finally {
       setSaving(false);
     }
