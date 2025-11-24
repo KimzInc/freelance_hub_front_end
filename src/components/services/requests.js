@@ -1,5 +1,87 @@
 import api from "./api";
 
+export async function clientEditRequest(id, payload) {
+  const fd = new FormData();
+  const fields = [
+    "title",
+    "deadline",
+    "number_of_pages",
+    "sources",
+    "style",
+    "description",
+    "attached_file_path",
+    "discipline",
+    "assignment_type",
+  ];
+
+  fields.forEach((k) => {
+    const v = payload[k];
+
+    // Skip unset or empty values (so PATCH won't overwrite with null accidentally)
+    if (v === undefined || v === null || v === "") return;
+
+    if (k === "deadline") {
+      // Accept either "YYYY-MM-DD" or "YYYY-MM-DDTHH:mm" or a Date object.
+      let dateOnly = null;
+      if (v instanceof Date && !isNaN(v.getTime())) {
+        // send YYYY-MM-DD
+        dateOnly = v.toISOString().split("T")[0];
+      } else if (typeof v === "string") {
+        // if contains 'T' (datetime-local) -> split; if it's full ISO -> split; else assume it's already YYYY-MM-DD
+        if (v.includes("T")) {
+          dateOnly = v.split("T")[0];
+        } else if (v.includes(" ")) {
+          // just in case: "2025-11-22 09:00"
+          dateOnly = v.split(" ")[0];
+        } else {
+          // probably already YYYY-MM-DD
+          dateOnly = v;
+        }
+      }
+      if (dateOnly) fd.append("deadline", dateOnly);
+      return;
+    }
+
+    if (k === "attached_file_path") {
+      // if payload contains a File object, append; if it's a string (existing file url), skip
+      if (v instanceof File) {
+        fd.append("attached_file_path", v);
+      }
+      // else: user didn't select a new file — don't append anything so backend keeps the old file
+      return;
+    }
+
+    // Discipline and assignment_type must be integer PKs
+    if (k === "discipline" || k === "assignment_type") {
+      // allow 0? if not, skip empty
+      if (typeof v === "number") fd.append(k, String(v));
+      else if (!isNaN(Number(v))) fd.append(k, String(Number(v)));
+      // else skip
+      return;
+    }
+
+    // numbers — ensure string values for FormData
+    if (k === "number_of_pages" || k === "sources") {
+      fd.append(k, String(v));
+      return;
+    }
+
+    // default: append as string
+    fd.append(k, String(v));
+  });
+
+  const { data } = await api.patch(`/request/${id}/client-edit/`, fd, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+
+  return data;
+}
+
+export async function getRequestById(id) {
+  const { data } = await api.get(`/request/${id}/`);
+  return data;
+}
+
 function calculateHoursUntilDeadline(deadline) {
   if (!deadline) return 96; // default fallback
   const deadlineDate = new Date(deadline);

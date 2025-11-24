@@ -90,8 +90,6 @@ export default function CustomRequestForm() {
     fetchPrice();
   }, [form.project_type, form.number_of_pages, form.deadline]);
 
-  // Rest of your existing code (calculateHoursUntilDeadline, onChange, validate, onSubmit, onReset, getTimeframeDescription)
-
   // Calculate hours until deadline
   const calculateHoursUntilDeadline = (deadline) => {
     if (!deadline) return 96;
