@@ -1,8 +1,4 @@
-# Getting Started with Create React App
-
-In the project directory, you can run:
-
-### `npm start`
+# Contact me for more information in relation to the project.
 
 ### contact address
 
