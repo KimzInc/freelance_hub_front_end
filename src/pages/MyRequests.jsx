@@ -11,7 +11,7 @@ export default function MyRequests() {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [editing, setEditing] = useState(null); // the request being edited
+  const [editing, setEditing] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
   async function load() {
