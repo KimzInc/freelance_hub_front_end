@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import api from "../components/services/api";
+import { toast } from "react-toastify";
 import {
   getCustomRequest,
   getDisciplines,
   getAssignmentTypes,
 } from "../components/services/requests";
+
 import ChatBox from "../components/chat/ChatBox";
 import CustomRequestPurchaseModal from "../components/Projects/CustomRequestPurchaseModal";
 
@@ -27,6 +30,25 @@ export default function CustomRequestDetailPage() {
       setRequest(requestData);
     } catch (err) {
       console.error("Failed to refresh request:", err);
+    }
+  };
+
+  const handleDownloadCompleted = async () => {
+    try {
+      const res = await api.get(`/request/${id}/download-completed/`);
+      const url = res.data?.url;
+
+      if (!url) {
+        toast.error("Failed to get download link");
+        return;
+      }
+
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch (err) {
+      console.error("Download completed project failed", err);
+      const msg =
+        err.response?.data?.detail || err.message || "Download failed";
+      toast.error(msg);
     }
   };
 
@@ -479,16 +501,14 @@ export default function CustomRequestDetailPage() {
           {parseFloat(request.paid_amount || 0) >=
           parseFloat(request.total_price || 0) ? (
             <div className="text-center">
-              <a
-                href={request.completed_file}
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                onClick={handleDownloadCompleted}
                 className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
-                download
               >
                 <span className="text-xl">⬇️</span>
-                Download Completed File
-              </a>
+                Download Completed Project
+              </button>
+
               <p className="text-sm text-gray-600 mt-2">
                 Your project has been completed by the freelancer. Click to
                 download the final submission.

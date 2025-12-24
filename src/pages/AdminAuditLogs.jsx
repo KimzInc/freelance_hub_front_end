@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   fetchAuditLogs,
   exportAuditLogsCSV,
@@ -14,11 +14,7 @@ export default function AdminAuditLogs() {
     action: "",
   });
 
-  useEffect(() => {
-    loadLogs();
-  }, []);
-
-  async function loadLogs() {
+  const loadLogs = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetchAuditLogs(filters);
@@ -36,7 +32,11 @@ export default function AdminAuditLogs() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [filters]);
+
+  useEffect(() => {
+    loadLogs();
+  }, [loadLogs]);
 
   function handleChange(e) {
     setFilters({ ...filters, [e.target.name]: e.target.value });

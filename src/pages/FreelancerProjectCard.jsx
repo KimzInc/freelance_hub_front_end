@@ -113,41 +113,57 @@ export default function FreelancerProjectCard({
     CANCELLED: "bg-red-100 text-red-800 border border-red-300",
   };
 
-  // FIXED: Better upload handler with progress feedback
   const handleCompletedUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // File size check (10MB)
-    if (file.size > 10 * 1024 * 1024) {
+    // Basic validation
+    const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+    if (file.size > MAX_SIZE) {
       toast.error("File too large. Maximum 10MB allowed.");
       return;
     }
 
-    const formData = new FormData();
-    formData.append("completed_file", file);
-
     try {
       setUploading(true);
-      await api.patch(`/request/${project.id}/`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-      toast.success("Completed file uploaded successfully!");
 
-      // Notify parent component to refresh data
+      // 1️⃣ Ask backend for presigned upload URL
+      const presignRes = await api.post(
+        `/custom-requests/${project.id}/upload-completed/`,
+        { filename: file.name }
+      );
+
+      const { upload_url, s3_key } = presignRes.data;
+
+      // 2️⃣ Upload directly to S3 (IMPORTANT: no auth header here)
+      await fetch(upload_url, {
+        method: "PUT",
+        headers: {
+          "Content-Type": file.type || "application/octet-stream",
+        },
+        body: file,
+      });
+
+      // 3️⃣ Confirm upload with backend (save s3_key)
+      await api.post(
+        `/custom-requests/${project.id}/confirm-completed-upload/`,
+        { s3_key }
+      );
+
+      toast.success("Completed project uploaded successfully!");
+
       if (onProjectUpdate) {
         onProjectUpdate();
       }
     } catch (err) {
-      console.error("Upload error:", err);
-      const errorMsg =
-        err.response?.data?.error ||
-        err.response?.data?.message ||
-        "Failed to upload file";
-      toast.error(errorMsg);
+      console.error("Upload failed:", err);
+      toast.error(
+        err.response?.data?.detail ||
+          err.response?.data?.error ||
+          "Failed to upload completed project"
+      );
     } finally {
       setUploading(false);
-      // Reset file input
       e.target.value = "";
     }
   };
