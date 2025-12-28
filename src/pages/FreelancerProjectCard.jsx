@@ -117,7 +117,6 @@ export default function FreelancerProjectCard({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Basic validation
     const MAX_SIZE = 10 * 1024 * 1024; // 10MB
     if (file.size > MAX_SIZE) {
       toast.error("File too large. Maximum 10MB allowed.");
@@ -127,16 +126,19 @@ export default function FreelancerProjectCard({
     try {
       setUploading(true);
 
-      // 1️⃣ Ask backend for presigned upload URL
       const presignRes = await api.post(
         `/custom-requests/${project.id}/upload-completed/`,
-        { filename: file.name }
+        {
+          filename: file.name,
+          content_type: file.type || "application/octet-stream",
+        }
       );
+
+      console.log("Step 2: Got response: ", presignRes.data);
 
       const { upload_url, s3_key } = presignRes.data;
 
-      // 2️⃣ Upload directly to S3 (IMPORTANT: no auth header here)
-      await fetch(upload_url, {
+      const putResponse = await fetch(upload_url, {
         method: "PUT",
         headers: {
           "Content-Type": file.type || "application/octet-stream",
@@ -144,22 +146,30 @@ export default function FreelancerProjectCard({
         body: file,
       });
 
-      // 3️⃣ Confirm upload with backend (save s3_key)
+      // THIS IS THE CRITICAL CHECK
+      if (!putResponse.ok) {
+        const errorText = await putResponse.text();
+        console.error("upload error details:", errorText);
+        throw new Error(
+          `S3 upload failed: ${putResponse.status} - ${errorText}`
+        );
+      }
+
+      // Confirm ONLY after successful upload
       await api.post(
         `/custom-requests/${project.id}/confirm-completed-upload/`,
         { s3_key }
       );
 
       toast.success("Completed project uploaded successfully!");
-
       if (onProjectUpdate) {
         onProjectUpdate();
       }
     } catch (err) {
       console.error("Upload failed:", err);
       toast.error(
-        err.response?.data?.detail ||
-          err.response?.data?.error ||
+        err?.message ||
+          err.response?.data?.detail ||
           "Failed to upload completed project"
       );
     } finally {

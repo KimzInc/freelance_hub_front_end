@@ -66,12 +66,6 @@ export default function Login() {
         password: form.password,
       });
 
-      // DEBUG: Check what we're receiving
-      console.log("🔍 Login response data:", data);
-      console.log("🔍 User is_active status:", data.user?.is_active);
-
-      // Remove the is_active check - backend handles unverified/inactive users
-
       login(data);
       toast.success(`Welcome back, ${data.user.username}!`);
 
